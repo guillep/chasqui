@@ -1,0 +1,24 @@
+package fr.univ_lille.cristal.emeraude.chasqui.tests
+
+import akka.actor.{ActorSystem, TypedActor, TypedProps}
+import fr.univ_lille.cristal.emeraude.chasqui.core.{IgnoreCausalityErrorStrategy, Node}
+import fr.univ_lille.cristal.emeraude.chasqui.mocks.{TestNode, TestNodeImpl}
+import org.scalatest.mockito.MockitoSugar
+import org.scalatest.{FlatSpec, Matchers}
+
+/**
+  * Created by guille on 10/04/17.
+  */
+class ChasquiBaseSpec extends FlatSpec with Matchers with MockitoSugar {
+
+  val system: ActorSystem = ActorSystem.create("test")
+
+  def newNodeInTime(t : Int): TestNode = {
+    val node = this.newNode
+    node.setTime(t)
+    node.setCausalityErrorStrategy(new IgnoreCausalityErrorStrategy)
+    node
+  }
+
+  def newNode: TestNode = TypedActor(system).typedActorOf(TypedProps[TestNodeImpl]())
+}
