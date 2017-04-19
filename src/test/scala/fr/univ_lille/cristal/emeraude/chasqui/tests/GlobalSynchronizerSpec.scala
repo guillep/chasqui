@@ -85,4 +85,56 @@ class GlobalSynchronizerSpec extends ChasquiBaseSpec {
     nodeA.getCurrentSimulationTime() should be(3)
     nodeB.getCurrentSimulationTime() should be(3)
   }
+
+  "A globally synchronized node" should "not advance until all others advance" in {
+    val nodeA = newNode
+    val nodeB = newNode
+
+    nodeA.setSynchronizerStrategy(new GlobalSynchronizerStrategy(system))
+    nodeB.setSynchronizerStrategy(new GlobalSynchronizerStrategy(system))
+
+    //Send three messages in the future
+    nodeB.sendMessage(nodeA, 1, "test")
+    nodeB.sendMessage(nodeA, 2, "test2")
+    nodeB.sendMessage(nodeA, 3, "test3")
+
+    //This will process all message in time 1 and inform it finished to its synchronizer strategy
+    nodeA.start()
+
+    //We sleep here to wait the actor system to react
+    //This is not the best way to test, because it may not scale in the future
+    // but it's a practical and simple one to start with
+    Thread.sleep(500)
+
+    nodeA.getCurrentSimulationTime() should be(0)
+  }
+
+  "A globally synchronized node" should "advance as soon as all others advance" in {
+    val nodeA = newNode
+    val nodeB = newNode
+
+    nodeA.setSynchronizerStrategy(new GlobalSynchronizerStrategy(system))
+    nodeB.setSynchronizerStrategy(new GlobalSynchronizerStrategy(system))
+
+    //Send three messages in the future
+    nodeB.sendMessage(nodeA, 1, "test")
+    nodeB.sendMessage(nodeA, 2, "test2")
+    nodeB.sendMessage(nodeA, 3, "test3")
+
+    //This will process all message in time 1 and inform it finished to its synchronizer strategy
+    nodeA.start()
+
+    //We sleep here to wait the actor system to react
+    //This is not the best way to test, because it may not scale in the future
+    // but it's a practical and simple one to start with
+    Thread.sleep(500)
+
+    nodeB.start()
+
+    //We sleep here to wait the actor system to react
+    //This is not the best way to test, because it may not scale in the future
+    // but it's a practical and simple one to start with
+    Thread.sleep(500)
+    nodeA.getCurrentSimulationTime() should be(3)
+  }
 }
