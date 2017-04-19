@@ -1,18 +1,23 @@
 package fr.univ_lille.cristal.emeraude.chasqui.core
 
-import akka.actor.{Actor, ActorRef, ActorSystem, ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider, Props, TypedActor, TypedProps}
+import akka.actor.{ActorSystem, ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider, TypedActor, TypedProps}
 
 /**
   * Created by guille on 19/04/17.
   */
 class GlobalSynchronizerStrategy(system: ActorSystem) extends SynchronizerStrategy{
 
+
   def registerNode(node: Node): Unit = {
-    SingletonService(system).instance.registerNode(node)
+    this.getSynchronizerActor().registerNode(node)
   }
 
   def notifyFinishedTime(node: Node, t: Int, queueSize: Int): Unit = {
-    SingletonService(system).instance.notifyFinishedTime(node, t, queueSize)
+    this.getSynchronizerActor().notifyFinishedTime(node, t, queueSize)
+  }
+
+  def getSynchronizerActor() = {
+    SingletonService(system).instance
   }
 }
 

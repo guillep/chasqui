@@ -7,6 +7,13 @@ import fr.univ_lille.cristal.emeraude.chasqui.core.GlobalSynchronizerStrategy
   */
 class GlobalSynchronizerSpec extends ChasquiBaseSpec {
 
+  "Two global synchronizer strategies" should "use the same global synchronizer actor" in {
+    val strategy1 = new GlobalSynchronizerStrategy(system)
+    val strategy2 = new GlobalSynchronizerStrategy(system)
+
+    strategy1.getSynchronizerActor() should be(strategy2.getSynchronizerActor())
+  }
+
   "A single node with global synchronizer strategy" should "advance in time until no more messages are available" in {
     val nodeA = newNode
     val nodeB = newNode
