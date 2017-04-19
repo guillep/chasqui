@@ -1,6 +1,6 @@
 package fr.univ_lille.cristal.emeraude.chasqui.mocks
 
-import fr.univ_lille.cristal.emeraude.chasqui.core.{Node, NodeImpl}
+import fr.univ_lille.cristal.emeraude.chasqui.core.{Node, NodeImpl, SynchronizerStrategy}
 
 /**
   * Created by guille on 10/04/17.
