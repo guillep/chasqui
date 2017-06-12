@@ -1,6 +1,11 @@
 package fr.univ_lille.cristal.emeraude.chasqui.core
 
+import java.util.concurrent.TimeUnit
+
 import akka.actor.{ActorSystem, ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider, TypedActor, TypedProps}
+import akka.util.Timeout
+
+import scala.concurrent.{Await, Future}
 
 /**
   * Created by guille on 19/04/17.
@@ -12,12 +17,16 @@ class GlobalSynchronizerStrategy(system: ActorSystem) extends SynchronizerStrate
     this.getSynchronizerActor().registerNode(node)
   }
 
-  def notifyFinishedTime(node: Node, t: Int, queueSize: Int): Unit = {
-    this.getSynchronizerActor().notifyFinishedTime(node, t, queueSize)
+  def notifyFinishedTime(node: Node, t: Long, queueSize: Int, messageDelta: Int): Unit = {
+    this.getSynchronizerActor().notifyFinishedTime(node, t, queueSize, messageDelta)
   }
 
   def getSynchronizerActor() = {
     SingletonService(system).instance
+  }
+
+  override def handleSynchronizationMessage(message: SynchronizationMessage, sender: Messaging, receiver: Node): Unit = {
+    //Nothing
   }
 }
 
@@ -28,28 +37,36 @@ trait MessageSynchronizer {
     nodes += node
   }
 
-  def notifyFinishedTime(node: Node, t: Int, queueSize: Int): Unit
+  def notifyFinishedTime(node: Node, t: Long, queueSize: Int, messageDelta: Int): Unit
 
 }
 
 class MessageSynchronizerImpl extends MessageSynchronizer {
 
+  import TypedActor.dispatcher
+
   val nodesFinishedThisQuantum = new collection.mutable.HashSet[Node]()
-  var messagesToBeProcessedThisQuantum: Int = 0
+  var messagesToBeProcessedFollowingQuantums: Int = 0
 
   protected def allNodesAreReady(): Boolean = {
-    this.nodes.forall( node => this.nodesFinishedThisQuantum.contains(node) )
+    nodes.forall(this.nodesFinishedThisQuantum.contains(_))
   }
 
-  def notifyFinishedTime(node: Node, t: Int, queueSize: Int): Unit = {
+  def allMessagesInThisQuantumProcessed(): Boolean = {
+    val sequence = nodes.toList.map(node => node.getMessageTransferDeltaInCurrentQuantum())
+    val total = Future.foldLeft[Int, Int](sequence)(0)((accum, each)=> accum + each)
+    Await.result(total, Timeout(5, TimeUnit.MINUTES).duration) == 0
+  }
+
+  def notifyFinishedTime(node: Node, t: Long, queueSize: Int, messageDelta: Int): Unit = {
 
     this.nodesFinishedThisQuantum += node
-    this.messagesToBeProcessedThisQuantum += queueSize
+    this.messagesToBeProcessedFollowingQuantums += queueSize
 
-    if (this.allNodesAreReady() && this.messagesToBeProcessedThisQuantum != 0) {
+    val allNodesReady = this.allNodesAreReady() && this.allMessagesInThisQuantumProcessed()
+    if (allNodesReady && (this.messagesToBeProcessedFollowingQuantums != 0)) {
       this.nodesFinishedThisQuantum.clear()
-      this.messagesToBeProcessedThisQuantum = 0
-
+      this.messagesToBeProcessedFollowingQuantums = 0
       this.nodes.foreach(node => node.advanceSimulationTime() )
     }
   }

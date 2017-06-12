@@ -19,6 +19,7 @@ class GlobalSynchronizerSpec extends ChasquiBaseSpec {
     val nodeB = newNode
 
     nodeA.setSynchronizerStrategy(new GlobalSynchronizerStrategy(system))
+    nodeB.setSynchronizerStrategy(new GlobalSynchronizerStrategy(system))
 
     //Send three messages in the future
     nodeB.sendMessage(nodeA, 1, "test")
@@ -26,13 +27,14 @@ class GlobalSynchronizerSpec extends ChasquiBaseSpec {
     nodeB.sendMessage(nodeA, 3, "test3")
 
     //This will process all message in time 1 and inform it finished to its synchronizer strategy
-    nodeA.start()
+    nodeA.checkPendingMessagesInQueue()
+    nodeB.checkPendingMessagesInQueue()
 
     //We sleep here to wait the actor system to react
     //This is not the best way to test, because it may not scale in the future
     // but it's a practical and simple one to start with
-    Thread.sleep(500)
-    nodeA.getCurrentSimulationTime() should be(3)
+    Thread.sleep(1000)
+    nodeB.getCurrentSimulationTime() should be(3)
   }
 
   "Several nodes with global synchronizer strategy" should "advance in time until no more messages are available" in {
@@ -49,8 +51,8 @@ class GlobalSynchronizerSpec extends ChasquiBaseSpec {
     nodeB.sendMessage(nodeA, 3, "test3")
 
     //This will process all message in time 1 and inform it finished to its synchronizer strategy
-    nodeA.start()
-    nodeB.start()
+    nodeA.checkPendingMessagesInQueue()
+    nodeB.checkPendingMessagesInQueue()
 
     //We sleep here to wait the actor system to react
     //This is not the best way to test, because it may not scale in the future
@@ -74,8 +76,8 @@ class GlobalSynchronizerSpec extends ChasquiBaseSpec {
     nodeB.sendMessage(nodeA, 3, "test3")
 
     //This will process all message in time 1 and inform it finished to its synchronizer strategy
-    nodeA.start()
-    nodeB.start()
+    nodeA.checkPendingMessagesInQueue()
+    nodeB.checkPendingMessagesInQueue()
 
     //We sleep here to wait the actor system to react
     //This is not the best way to test, because it may not scale in the future
@@ -99,7 +101,7 @@ class GlobalSynchronizerSpec extends ChasquiBaseSpec {
     nodeB.sendMessage(nodeA, 3, "test3")
 
     //This will process all message in time 1 and inform it finished to its synchronizer strategy
-    nodeA.start()
+    nodeA.checkPendingMessagesInQueue()
 
     //We sleep here to wait the actor system to react
     //This is not the best way to test, because it may not scale in the future
@@ -122,14 +124,14 @@ class GlobalSynchronizerSpec extends ChasquiBaseSpec {
     nodeB.sendMessage(nodeA, 3, "test3")
 
     //This will process all message in time 1 and inform it finished to its synchronizer strategy
-    nodeA.start()
+    nodeA.checkPendingMessagesInQueue()
 
     //We sleep here to wait the actor system to react
     //This is not the best way to test, because it may not scale in the future
     // but it's a practical and simple one to start with
     Thread.sleep(500)
 
-    nodeB.start()
+    nodeB.checkPendingMessagesInQueue()
 
     //We sleep here to wait the actor system to react
     //This is not the best way to test, because it may not scale in the future

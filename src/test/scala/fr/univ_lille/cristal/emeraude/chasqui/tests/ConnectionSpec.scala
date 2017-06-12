@@ -23,6 +23,8 @@ class ConnectionSpec extends ChasquiBaseSpec {
 
     nodeA.connectTo(nodeB)
 
+    Thread.sleep(500)
+
     nodeB.getIngoingConnections should contain (nodeA)
   }
 }
