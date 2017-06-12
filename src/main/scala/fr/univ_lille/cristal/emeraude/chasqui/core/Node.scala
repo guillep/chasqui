@@ -7,7 +7,6 @@ import akka.actor.{Actor, ActorRef}
 import fr.univ_lille.cristal.emeraude.chasqui.core.Node._
 import fr.univ_lille.cristal.emeraude.chasqui.core.causality.ErrorCausalityErrorStrategy
 import fr.univ_lille.cristal.emeraude.chasqui.core.synchronization.ManualSynchronizerStrategy
-import fr.univ_lille.cristal.emeraude.chasqui.core.typed.NodeActorWrapper
 
 import scala.collection.{Set, mutable}
 import scala.concurrent.Future
@@ -254,7 +253,7 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
 
   def sendMessage(receiver: ActorRef, timestamp: Long, message: Any): Any = {
     this.sentMessagesInQuantum += 1
-    new NodeActorWrapper(receiver).scheduleMessage(message, timestamp, self)
+    receiver ! ScheduleMessage(message, timestamp, self)
   }
 
   def broadcastMessage(timestamp: Long, message: Any, roleToBroadcastTo: String = "default"): Unit = {

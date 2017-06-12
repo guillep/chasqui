@@ -3,9 +3,10 @@ package fr.univ_lille.cristal.emeraude.chasqui.core.synchronization
 import java.util.concurrent.TimeUnit
 
 import akka.actor.{ActorRef, ActorSystem, ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider, TypedActor, TypedProps}
+import akka.pattern.ask
 import akka.util.Timeout
+import fr.univ_lille.cristal.emeraude.chasqui.core.Node.{AdvanceSimulationTime, GetIncomingQuantum, GetMessageTransferDeltaInCurrentQuantum}
 import fr.univ_lille.cristal.emeraude.chasqui.core._
-import fr.univ_lille.cristal.emeraude.chasqui.core.typed.NodeActorWrapper
 import fr.univ_lille.cristal.emeraude.chasqui.porting.InputActor.PushSpikes
 
 import scala.concurrent.{Await, Future}
@@ -54,15 +55,15 @@ class InputBasedMessageSynchronizerImpl extends InputMessageSynchronizer {
   }
 
   def allMessagesInThisQuantumProcessed(): Boolean = {
-    val sequence = nodes.toList.map(node => new NodeActorWrapper(node).getMessageTransferDeltaInCurrentQuantum())
+    val sequence = nodes.toList.map(node => (node ? GetMessageTransferDeltaInCurrentQuantum).asInstanceOf[Future[Int]])
     val total = Future.foldLeft[Int, Int](sequence)(0)((accum, each)=> accum + each)
     Await.result(total, Timeout(5, TimeUnit.MINUTES).duration) == 0
   }
 
   def askForNextQuantum(): Long = {
     val total = Future
-      .sequence(nodes.toList.map(node => new NodeActorWrapper(node).getIncomingQuantum()))
-      .map(_.filter(_.isDefined).map(_.get).reduce((a,b) => math.min(a,b)))
+      .sequence(nodes.toList.map(node => (node ! GetIncomingQuantum).asInstanceOf[Future[Option[Long]]]))
+      .map(_.filter(_.isDefined).map(_.get).min)
     Await.result(total, Timeout(5, TimeUnit.MINUTES).duration)
   }
 
@@ -77,7 +78,7 @@ class InputBasedMessageSynchronizerImpl extends InputMessageSynchronizer {
       val nextQuantum = this.askForNextQuantum()
       this.nodesFinishedThisQuantum.clear()
       this.messagesToBeProcessedFollowingQuantums = 0
-      this.nodes.foreach(node => new NodeActorWrapper(node).advanceSimulationTime(nextQuantum))
+      this.nodes.foreach(node => node ! AdvanceSimulationTime(nextQuantum))
 
       if(inputActor.isDefined){
         inputActor.get ! PushSpikes
