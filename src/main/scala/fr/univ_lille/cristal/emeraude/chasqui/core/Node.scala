@@ -236,8 +236,6 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
 
   override def toString = super.toString + s"(${this.id})"
 
-  private val wrapper = new NodeActorWrapper(self)
-
   private var synchronizerStrategy: SynchronizerStrategy = new ManualSynchronizerStrategy
   private var currentSimulationTime: Long = 0
   private val messageQueue = scala.collection.mutable.PriorityQueue[Message]()(Ordering.fromLessThan((s1, s2) => s1.getTimestamp > s2.getTimestamp))
@@ -323,7 +321,7 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
   }
 
   def scheduleSimulationAdvance(nextQuantum: Long): Unit = {
-    wrapper.advanceSimulationTime(nextQuantum)
+    self ! AdvanceSimulationTime(nextQuantum)
   }
 
   def getIncomingQuantum(): Future[Option[Long]] = {
