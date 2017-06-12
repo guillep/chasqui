@@ -9,7 +9,7 @@ import fr.univ_lille.cristal.emeraude.chasqui.core.Node.{AdvanceSimulationTime, 
 import fr.univ_lille.cristal.emeraude.chasqui.core._
 import fr.univ_lille.cristal.emeraude.chasqui.porting.InputActor.PushSpikes
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 /**
   * Created by guille on 19/04/17.
@@ -39,8 +39,9 @@ trait InputMessageSynchronizer extends MessageSynchronizer {
 }
 
 class InputBasedMessageSynchronizerImpl extends InputMessageSynchronizer {
-
-  import TypedActor.dispatcher
+  import scala.concurrent.duration._
+  implicit val ec = ExecutionContext.Implicits.global
+  implicit lazy val timeout = Timeout(5 seconds)
 
   val nodesFinishedThisQuantum = new collection.mutable.HashSet[ActorRef]()
   var messagesToBeProcessedFollowingQuantums: Int = 0

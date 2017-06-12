@@ -8,7 +8,7 @@ import akka.util.Timeout
 import fr.univ_lille.cristal.emeraude.chasqui.core.Node.{AdvanceSimulationTime, GetMessageTransferDeltaInCurrentQuantum}
 import fr.univ_lille.cristal.emeraude.chasqui.core._
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 /**
   * Created by guille on 19/04/17.
@@ -45,8 +45,9 @@ trait MessageSynchronizer {
 }
 
 class MessageSynchronizerImpl extends MessageSynchronizer {
-
-  import TypedActor.dispatcher
+  import scala.concurrent.duration._
+  implicit val ec = ExecutionContext.Implicits.global
+  implicit lazy val timeout = Timeout(5 seconds)
 
   val nodesFinishedThisQuantum = new collection.mutable.HashSet[ActorRef]()
   var messagesToBeProcessedFollowingQuantums: Int = 0
