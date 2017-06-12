@@ -9,6 +9,7 @@ import akka.util.Timeout
 import fr.univ_lille.cristal.emeraude.chasqui.core.Node._
 import fr.univ_lille.cristal.emeraude.chasqui.core.causality.ErrorCausalityErrorStrategy
 import fr.univ_lille.cristal.emeraude.chasqui.core.synchronization.ManualSynchronizerStrategy
+import fr.univ_lille.cristal.emeraude.chasqui.core.typed.NodeActorWrapper
 
 import scala.collection.{Set, mutable}
 import scala.concurrent.duration._
@@ -112,120 +113,6 @@ object NullNode extends Messaging {
   }
 }
 
-class NodeActorWrapper(val actor: ActorRef) {
-  import Node._
-  implicit val timeout = Timeout(21474835 seconds)
-
-  def setId(id: String): Unit = {
-    actor ! SetId(id)
-  }
-
-  def getIngoingConnections: Set[ActorRef] = {
-    Await.result(actor ? GetIngoingConnections, Timeout(21474835 seconds).duration).asInstanceOf[Set[ActorRef]]
-  }
-
-  def getIngoingConnections(role: String): Set[ActorRef] = {
-    Await.result(actor ? GetIngoingConnections(role), Timeout(21474835 seconds).duration).asInstanceOf[Set[ActorRef]]
-  }
-
-  def getOutgoingConnections: Set[ActorRef] = {
-    Await.result(actor ? GetOutgoingConnections, Timeout(21474835 seconds).duration).asInstanceOf[Set[ActorRef]]
-  }
-
-  def getMessageTransferDeltaInCurrentQuantum(): Future[Int] = {
-    (actor ? GetMessageTransferDeltaInCurrentQuantum).asInstanceOf[Future[Int]]
-  }
-
-  def blockingConnectTo(node: NodeActorWrapper, role: String): Option[_] = {
-    Await.result(actor ? ConnectTo(node.actor, role), Timeout(21474835 seconds).duration).asInstanceOf[Option[_]]
-  }
-
-  def connectTo(node: NodeActorWrapper, role: String = "default"): Unit = {
-    actor ! ConnectTo(node.actor, role)
-  }
-
-  def addIngoingConnectionTo(node: NodeActorWrapper, role: String): Unit = {
-    actor ! AddIngoingConnectionTo(node.actor, role)
-  }
-
-  def receiveMessage(message: Any, sender: ActorRef): Unit = {
-    actor ! ReceiveMessage(message, sender)
-  }
-
-  def setTime(t: Long): Unit = {
-    actor ! SetTime(t)
-  }
-
-  def getCurrentSimulationTime(): Long = {
-    Await.result(actor ? GetCurrentSimulationTime, Timeout(21474835 seconds).duration).asInstanceOf[Long]
-  }
-
-  def setSynchronizerStrategy(synchronizerStrategy: SynchronizerStrategy): Unit = {
-    actor ! SetSynchronizerStrategy(synchronizerStrategy)
-  }
-
-  def checkPendingMessagesInQueue(): Unit = {
-    actor ! CheckPendingMessagesInQueue
-  }
-
-  def notifyFinishedQuantum(): Unit = {
-    actor ! NotifyFinishedQuantum
-  }
-
-  def getRealIncomingQuantum(): Option[Long] = {
-    Await.result(this.getIncomingQuantum(), Timeout(21474835 seconds).duration)
-  }
-
-  def getIncomingQuantum(): Future[Option[Long]] = {
-    (actor ? GetIncomingQuantum).asInstanceOf[Future[Option[Long]]]
-  }
-
-  def advanceSimulationTime(): Unit = {
-    actor ! AdvanceSimulationTime
-  }
-
-  def advanceSimulationTime(nextQuantum: Long): Unit = {
-    actor ! AdvanceSimulationTime(nextQuantum)
-  }
-
-  def scheduleSimulationAdvance(nextQuantum: Long): Unit = {
-    this.advanceSimulationTime(nextQuantum)
-  }
-
-  def setCausalityErrorStrategy(causalityErrorStrategy: CausalityErrorStrategy): Unit = {
-    actor ! SetCausalityErrorStrategy(causalityErrorStrategy)
-  }
-
-  def getScheduledMessages: mutable.PriorityQueue[Message] = {
-    Await.result(actor ? GetScheduledMessages, Timeout(21474835 seconds).duration).asInstanceOf[mutable.PriorityQueue[Message]]
-  }
-
-  def hasPendingMessages(): Boolean = {
-    Await.result(actor ? HasPendingMessages, Timeout(21474835 seconds).duration).asInstanceOf[Boolean]
-  }
-
-  def hasPendingMessagesOfTimestamp(t: Long): Boolean = {
-    Await.result(actor ? HasPendingMessagesOfTimestamp(t), Timeout(21474835 seconds).duration).asInstanceOf[Boolean]
-  }
-
-  def broadcastMessageToIncoming(message: Any, timestamp: Long): Unit = {
-    actor ! BroadcastMessageToIncoming(message, timestamp)
-  }
-
-  def sendMessage(receiver: ActorRef, timestamp: Long, message: Any): Any = {
-    actor ! SendMessage(receiver, message, timestamp)
-  }
-
-  def scheduleMessage(message: Any, timestamp: Long, sender: ActorRef): Unit = {
-    actor ! ScheduleMessage(message, timestamp, sender)
-  }
-
-  override def equals(obj: scala.Any): Boolean = {
-    obj.asInstanceOf[NodeActorWrapper].actor == actor
-  }
-
-  override def hashCode(): Int = actor.hashCode()
-}
 
 abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrategy = new ErrorCausalityErrorStrategy) extends Actor with Node {
 

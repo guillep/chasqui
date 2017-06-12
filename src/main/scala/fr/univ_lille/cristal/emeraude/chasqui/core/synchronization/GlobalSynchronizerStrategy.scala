@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit
 import akka.actor.{ActorRef, ActorSystem, ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider, TypedActor, TypedProps}
 import akka.util.Timeout
 import fr.univ_lille.cristal.emeraude.chasqui.core._
+import fr.univ_lille.cristal.emeraude.chasqui.core.typed.NodeActorWrapper
 
 import scala.concurrent.{Await, Future}
 

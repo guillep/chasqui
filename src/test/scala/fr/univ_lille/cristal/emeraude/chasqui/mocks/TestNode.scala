@@ -3,7 +3,8 @@ package fr.univ_lille.cristal.emeraude.chasqui.mocks
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
-import fr.univ_lille.cristal.emeraude.chasqui.core.{Node, NodeActorWrapper, NodeImpl}
+import fr.univ_lille.cristal.emeraude.chasqui.core.typed.NodeActorWrapper
+import fr.univ_lille.cristal.emeraude.chasqui.core.{Node, NodeImpl}
 import fr.univ_lille.cristal.emeraude.chasqui.mocks.TestNodeWrapper.GetReceivedMessages
 
 import scala.collection.Set
