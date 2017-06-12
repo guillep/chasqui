@@ -15,17 +15,18 @@ class GlobalSynchronizerSpec extends ChasquiBaseSpec {
   }
 
   "A single node with global synchronizer strategy" should "advance in time until no more messages are available" in {
-    val nodeA = newNode
-    val nodeB = newNode
+    val nodeA = newNode("NodeA")
+    val nodeB = newNode("NodeB")
 
     nodeA.setSynchronizerStrategy(new GlobalSynchronizerStrategy(system))
     nodeB.setSynchronizerStrategy(new GlobalSynchronizerStrategy(system))
 
     //Send three messages in the future
-    nodeB.sendMessage(nodeA, 1, "test")
-    nodeB.sendMessage(nodeA, 2, "test2")
-    nodeB.sendMessage(nodeA, 3, "test3")
+    nodeB.sendMessage(nodeA.actor, 1, "test")
+    nodeB.sendMessage(nodeA.actor, 2, "test2")
+    nodeB.sendMessage(nodeA.actor, 3, "test3")
 
+    Thread.sleep(500)
     //This will process all message in time 1 and inform it finished to its synchronizer strategy
     nodeA.checkPendingMessagesInQueue()
     nodeB.checkPendingMessagesInQueue()
@@ -45,11 +46,12 @@ class GlobalSynchronizerSpec extends ChasquiBaseSpec {
     nodeB.setSynchronizerStrategy(new GlobalSynchronizerStrategy(system))
 
     //Send three messages in the future
-    nodeB.sendMessage(nodeA, 1, "test")
-    nodeA.sendMessage(nodeB, 2, "response")
-    nodeB.sendMessage(nodeA, 2, "test2")
-    nodeB.sendMessage(nodeA, 3, "test3")
+    nodeB.sendMessage(nodeA.actor, 1, "test")
+    nodeA.sendMessage(nodeB.actor, 2, "response")
+    nodeB.sendMessage(nodeA.actor, 2, "test2")
+    nodeB.sendMessage(nodeA.actor, 3, "test3")
 
+    Thread.sleep(500)
     //This will process all message in time 1 and inform it finished to its synchronizer strategy
     nodeA.checkPendingMessagesInQueue()
     nodeB.checkPendingMessagesInQueue()
@@ -71,10 +73,11 @@ class GlobalSynchronizerSpec extends ChasquiBaseSpec {
     nodeB.setSynchronizerStrategy(new GlobalSynchronizerStrategy(system))
 
     //Send three messages in the future
-    nodeB.sendMessage(nodeA, 1, "test")
-    nodeB.sendMessage(nodeA, 2, "test2")
-    nodeB.sendMessage(nodeA, 3, "test3")
+    nodeB.sendMessage(nodeA.actor, 1, "test")
+    nodeB.sendMessage(nodeA.actor, 2, "test2")
+    nodeB.sendMessage(nodeA.actor, 3, "test3")
 
+    Thread.sleep(500)
     //This will process all message in time 1 and inform it finished to its synchronizer strategy
     nodeA.checkPendingMessagesInQueue()
     nodeB.checkPendingMessagesInQueue()
@@ -96,9 +99,9 @@ class GlobalSynchronizerSpec extends ChasquiBaseSpec {
     nodeB.setSynchronizerStrategy(new GlobalSynchronizerStrategy(system))
 
     //Send three messages in the future
-    nodeB.sendMessage(nodeA, 1, "test")
-    nodeB.sendMessage(nodeA, 2, "test2")
-    nodeB.sendMessage(nodeA, 3, "test3")
+    nodeB.sendMessage(nodeA.actor, 1, "test")
+    nodeB.sendMessage(nodeA.actor, 2, "test2")
+    nodeB.sendMessage(nodeA.actor, 3, "test3")
 
     //This will process all message in time 1 and inform it finished to its synchronizer strategy
     nodeA.checkPendingMessagesInQueue()
@@ -119,10 +122,11 @@ class GlobalSynchronizerSpec extends ChasquiBaseSpec {
     nodeB.setSynchronizerStrategy(new GlobalSynchronizerStrategy(system))
 
     //Send three messages in the future
-    nodeB.sendMessage(nodeA, 1, "test")
-    nodeB.sendMessage(nodeA, 2, "test2")
-    nodeB.sendMessage(nodeA, 3, "test3")
+    nodeB.sendMessage(nodeA.actor, 1, "test")
+    nodeB.sendMessage(nodeA.actor, 2, "test2")
+    nodeB.sendMessage(nodeA.actor, 3, "test3")
 
+    Thread.sleep(500)
     //This will process all message in time 1 and inform it finished to its synchronizer strategy
     nodeA.checkPendingMessagesInQueue()
 

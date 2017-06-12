@@ -1,6 +1,7 @@
 package fr.univ_lille.cristal.emeraude.chasqui.tests
 
 import fr.univ_lille.cristal.emeraude.chasqui.core.SynchronizerStrategy
+import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.verify
 
 /**
@@ -21,6 +22,13 @@ class SynchronizerSpec extends ChasquiBaseSpec {
     //This is not the best way to test, because it may not scale in the future
     // but it's a practical and simple one to start with
     Thread.sleep(500)
-    verify(synchronizerStrategy).notifyFinishedTime(nodeA, nodeA, 1, 0, 0)
+
+    verify(synchronizerStrategy).notifyFinishedTime(
+      org.mockito.ArgumentMatchers.eq(nodeA.actor),
+      ArgumentMatchers.any(),
+      org.mockito.ArgumentMatchers.eq(1L),
+      org.mockito.ArgumentMatchers.eq(0),
+      org.mockito.ArgumentMatchers.eq(0))
+
   }
 }

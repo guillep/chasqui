@@ -11,6 +11,7 @@ libraryDependencies ++= {
   val scalaXmlV = "1.0.6"
   val akkaV = "2.4.17"
   val scalatestV = "3.0.1"
+  val scalacOptions = Seq("-language:postfixOps")
   Seq(
     "com.typesafe.akka" %% "akka-actor"      % akkaV,
     "com.typesafe.akka" %% "akka-testkit"    % akkaV,

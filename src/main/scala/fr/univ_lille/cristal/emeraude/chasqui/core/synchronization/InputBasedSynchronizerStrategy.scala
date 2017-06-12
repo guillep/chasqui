@@ -15,11 +15,11 @@ import scala.concurrent.{Await, Future}
 class InputBasedSynchronizerStrategy(system: ActorSystem) extends SynchronizerStrategy{
 
 
-  def registerNode(node: Node): Unit = {
+  def registerNode(node: ActorRef): Unit = {
     this.getSynchronizerActor().registerNode(node)
   }
 
-  def notifyFinishedTime(nodeActor: Node, node: Node, t: Long, queueSize: Int, messageDelta: Int): Unit = {
+  def notifyFinishedTime(nodeActor: ActorRef, node: Node, t: Long, queueSize: Int, messageDelta: Int): Unit = {
     this.getSynchronizerActor().notifyFinishedTime(nodeActor, t, queueSize, messageDelta)
   }
 
@@ -40,7 +40,7 @@ class InputBasedMessageSynchronizerImpl extends InputMessageSynchronizer {
 
   import TypedActor.dispatcher
 
-  val nodesFinishedThisQuantum = new collection.mutable.HashSet[Node]()
+  val nodesFinishedThisQuantum = new collection.mutable.HashSet[ActorRef]()
   var messagesToBeProcessedFollowingQuantums: Int = 0
   var inputActor: Option[ActorRef] = None
 
@@ -53,19 +53,19 @@ class InputBasedMessageSynchronizerImpl extends InputMessageSynchronizer {
   }
 
   def allMessagesInThisQuantumProcessed(): Boolean = {
-    val sequence = nodes.toList.map(node => node.getMessageTransferDeltaInCurrentQuantum())
+    val sequence = nodes.toList.map(node => new NodeActorWrapper(node).getMessageTransferDeltaInCurrentQuantum())
     val total = Future.foldLeft[Int, Int](sequence)(0)((accum, each)=> accum + each)
     Await.result(total, Timeout(5, TimeUnit.MINUTES).duration) == 0
   }
 
   def askForNextQuantum(): Long = {
     val total = Future
-      .sequence(nodes.toList.map(node => node.getIncomingQuantum()))
+      .sequence(nodes.toList.map(node => new NodeActorWrapper(node).getIncomingQuantum()))
       .map(_.filter(_.isDefined).map(_.get).reduce((a,b) => math.min(a,b)))
     Await.result(total, Timeout(5, TimeUnit.MINUTES).duration)
   }
 
-  def notifyFinishedTime(node: Node, t: Long, queueSize: Int, messageDelta: Int): Unit = {
+  def notifyFinishedTime(node: ActorRef, t: Long, queueSize: Int, messageDelta: Int): Unit = {
 
     this.nodesFinishedThisQuantum += node
     this.messagesToBeProcessedFollowingQuantums += queueSize
@@ -76,7 +76,7 @@ class InputBasedMessageSynchronizerImpl extends InputMessageSynchronizer {
       val nextQuantum = this.askForNextQuantum()
       this.nodesFinishedThisQuantum.clear()
       this.messagesToBeProcessedFollowingQuantums = 0
-      this.nodes.foreach(node => node.advanceSimulationTime(nextQuantum))
+      this.nodes.foreach(node => new NodeActorWrapper(node).advanceSimulationTime(nextQuantum))
 
       if(inputActor.isDefined){
         inputActor.get ! PushSpikes

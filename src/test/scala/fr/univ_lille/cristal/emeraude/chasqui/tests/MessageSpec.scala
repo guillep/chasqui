@@ -1,7 +1,8 @@
 package fr.univ_lille.cristal.emeraude.chasqui.tests
 
-import fr.univ_lille.cristal.emeraude.chasqui.core.CausalityErrorStrategy
+import fr.univ_lille.cristal.emeraude.chasqui.core.{CausalityErrorStrategy, NodeActorWrapper}
 import org.mockito.Mockito.verify
+import org.mockito.ArgumentCaptor
 
 /**
   * Created by guille on 10/04/17.
@@ -12,8 +13,9 @@ class MessageSpec extends ChasquiBaseSpec {
     val nodeA = newNode
     val nodeB = newNodeInTime(1)
 
-    nodeA.sendMessage(nodeB, 1, "message")
+    nodeA.sendMessage(nodeB.actor, 1, "message")
 
+    Thread.sleep(500)
     nodeB.getReceivedMessages should contain ("message")
   }
 
@@ -21,8 +23,9 @@ class MessageSpec extends ChasquiBaseSpec {
     val nodeA = newNode
     val nodeB = newNodeInTime(1)
 
-    nodeA.sendMessage(nodeB, 2, "message")
+    nodeA.sendMessage(nodeB.actor, 2, "message")
 
+    Thread.sleep(500)
     nodeB.getReceivedMessages should be ('empty)
   }
 
@@ -30,8 +33,9 @@ class MessageSpec extends ChasquiBaseSpec {
     val nodeA = newNode
     val nodeB = newNodeInTime(1)
 
-    nodeA.sendMessage(nodeB, 2, "message")
+    nodeA.sendMessage(nodeB.actor, 2, "message")
 
+    Thread.sleep(500)
     nodeB.advanceSimulationTime()
     nodeB.getReceivedMessages should contain ("message")
   }
@@ -40,8 +44,9 @@ class MessageSpec extends ChasquiBaseSpec {
     val nodeA = newNode
     val nodeB = newNodeInTime(1)
 
-    nodeA.sendMessage(nodeB, 3, "message")
+    nodeA.sendMessage(nodeB.actor, 3, "message")
 
+    Thread.sleep(500)
     nodeB.advanceSimulationTime()
     nodeB.getReceivedMessages should be ('empty)
   }
@@ -50,8 +55,9 @@ class MessageSpec extends ChasquiBaseSpec {
     val nodeA = newNode
     val nodeB = newNodeInTime(1)
 
-    nodeA.sendMessage(nodeB, 3, "message")
+    nodeA.sendMessage(nodeB.actor, 3, "message")
 
+    Thread.sleep(500)
     nodeB.advanceSimulationTime()
     nodeB.advanceSimulationTime()
     nodeB.getReceivedMessages should contain ("message")
@@ -61,8 +67,9 @@ class MessageSpec extends ChasquiBaseSpec {
     val nodeA = newNode
     val nodeB = newNodeInTime(1)
 
-    nodeA.sendMessage(nodeB, 0, "message")
+    nodeA.sendMessage(nodeB.actor, 0, "message")
 
+    Thread.sleep(500)
     nodeB.getReceivedMessages should be ('empty)
   }
 
@@ -70,8 +77,9 @@ class MessageSpec extends ChasquiBaseSpec {
     val nodeA = newNode
     val nodeB = newNodeInTime(1)
 
-    nodeA.sendMessage(nodeB, 0, "message")
+    nodeA.sendMessage(nodeB.actor, 0, "message")
 
+    Thread.sleep(500)
     nodeB.getScheduledMessages should be ('empty)
   }
 
@@ -82,8 +90,18 @@ class MessageSpec extends ChasquiBaseSpec {
     val causalityErrorStrategy = mock[CausalityErrorStrategy]
     nodeB.setCausalityErrorStrategy(causalityErrorStrategy)
 
-    nodeA.sendMessage(nodeB, 0, "message")
+    nodeA.sendMessage(nodeB.actor, 0, "message")
 
-    verify(causalityErrorStrategy).handleCausalityError(0, 1, nodeB, nodeA, "message")
+    Thread.sleep(500)
+    val wrapper1: ArgumentCaptor[NodeActorWrapper] = ArgumentCaptor.forClass(classOf[NodeActorWrapper])
+    val wrapper2: ArgumentCaptor[NodeActorWrapper] = ArgumentCaptor.forClass(classOf[NodeActorWrapper])
+    verify(causalityErrorStrategy).handleCausalityError(
+      org.mockito.ArgumentMatchers.eq(0L),
+      org.mockito.ArgumentMatchers.eq(1L),
+      wrapper1.capture(),
+      wrapper2.capture(),
+      org.mockito.ArgumentMatchers.eq("message"))
+    wrapper1.getValue.actor should be(nodeB.actor)
+    wrapper2.getValue.actor should be(nodeA.actor)
   }
 }
