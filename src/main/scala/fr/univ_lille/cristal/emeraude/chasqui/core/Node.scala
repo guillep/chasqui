@@ -3,6 +3,8 @@ package fr.univ_lille.cristal.emeraude.chasqui.core
 import java.util.UUID
 
 import akka.actor.TypedActor
+import fr.univ_lille.cristal.emeraude.chasqui.core.causality.ErrorCausalityErrorStrategy
+import fr.univ_lille.cristal.emeraude.chasqui.core.synchronization.ManualSynchronizerStrategy
 
 import scala.collection.{Set, mutable}
 import scala.concurrent.Future
@@ -22,7 +24,6 @@ object CurrentQuantum
 
 trait Node extends Messaging {
   def getId: String
-
   def setId(id: String)
 
   def self: Node
@@ -46,18 +47,16 @@ trait Node extends Messaging {
   def setTime(t: Long): Unit
 
   def getCurrentSimulationTime(): Long
-
   def setSynchronizerStrategy(synchronizerStrategy: SynchronizerStrategy): Unit
-
   def checkPendingMessagesInQueue(): Unit
+  def notifyFinishedQuantum(): Unit
 
   def getRealIncomingQuantum(): Option[Long]
-
   def getIncomingQuantum(): Future[Option[Long]]
 
   def advanceSimulationTime(): Unit
-
   def advanceSimulationTime(nextQuantum: Long): Unit
+  def scheduleSimulationAdvance(nextQuantum: Long): Unit
 
   def setCausalityErrorStrategy(causalityErrorStrategy: CausalityErrorStrategy): Unit
 
@@ -66,6 +65,8 @@ trait Node extends Messaging {
   def isReady: Future[Boolean] = Future.successful(true)
 
   def hasPendingMessages(): Boolean
+
+  def hasPendingMessagesOfTimestamp(t: Long): Boolean
 
   def broadcastMessageToIncoming(message: Any, timestamp: Long): Unit
 
@@ -87,6 +88,8 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
 
   def getId = id
   def setId(id: String) = this.id = id
+
+  override def toString = super.toString + s"(${this.id})"
 
   private var synchronizerStrategy: SynchronizerStrategy = new ManualSynchronizerStrategy
   private var currentSimulationTime: Long = 0
@@ -180,6 +183,10 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
     this.checkPendingMessagesInQueue()
   }
 
+  def scheduleSimulationAdvance(nextQuantum: Long): Unit = {
+    self.advanceSimulationTime(nextQuantum)
+  }
+
   def getIncomingQuantum(): Future[Option[Long]] = {
     Future.successful(this.getRealIncomingQuantum())
   }
@@ -204,7 +211,11 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
     this.sentMessagesInQuantum = 0
     this.receivedMessagesInQuantum = 0
     this.isStateReady = true
-    this.synchronizerStrategy.notifyFinishedTime(self, this.currentSimulationTime, this.getScheduledMessages.size, this.getMessageDeltaInQuantum)
+    this.notifyFinishedQuantum()
+  }
+
+  def notifyFinishedQuantum(): Unit = {
+    this.synchronizerStrategy.notifyFinishedTime(self, this, this.currentSimulationTime, this.getScheduledMessages.size, this.getMessageDeltaInQuantum)
   }
 
   private def getMessageDeltaInQuantum = {
@@ -219,6 +230,10 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
 
   def hasPendingMessages(): Boolean = {
     !this.messageQueue.isEmpty
+  }
+
+  def hasPendingMessagesOfTimestamp(t: Long): Boolean = {
+    this.hasPendingMessages() && this.messageQueue.head.getTimestamp == t
   }
 
   def sendMessage(receiver: Messaging, timestamp: Long, message: Any): Any = {
@@ -262,13 +277,13 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
 
   protected def handleIncomingMessage(message: Any, sender: Messaging): Unit = {
     this.internalReceiveMessage(message, sender)
-    this.checkPendingMessagesInQueue()
+    //this.checkPendingMessagesInQueue()
   }
 
   def internalReceiveMessage(message: Any, sender: Messaging): Unit = {
     try{
       if (message.isInstanceOf[SynchronizationMessage]){
-        this.synchronizerStrategy.handleSynchronizationMessage(message.asInstanceOf[SynchronizationMessage], sender, self)
+        this.synchronizerStrategy.handleSynchronizationMessage(message.asInstanceOf[SynchronizationMessage], sender, this, this.getCurrentSimulationTime())
       }else {
         this.receiveMessage(message, sender)
       }

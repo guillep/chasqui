@@ -7,6 +7,6 @@ class SynchronizationMessage
 
 trait SynchronizerStrategy {
   def registerNode(self: Node): Unit
-  def notifyFinishedTime(node: Node, t: Long, queueSize: Int, messageDelta: Int): Unit
-  def handleSynchronizationMessage(message: SynchronizationMessage, sender: Messaging, receiver: Node): Unit
+  def notifyFinishedTime(nodeActor: Node, node: Node, t: Long, queueSize: Int, messageDelta: Int): Unit
+  def handleSynchronizationMessage(message: SynchronizationMessage, sender: Messaging, receiver: Node, t: Long): Unit
 }
