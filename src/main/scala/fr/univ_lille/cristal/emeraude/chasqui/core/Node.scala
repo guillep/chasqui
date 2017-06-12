@@ -4,16 +4,13 @@ import java.util.UUID
 
 import akka.Done
 import akka.actor.{Actor, ActorRef}
-import akka.pattern.ask
-import akka.util.Timeout
 import fr.univ_lille.cristal.emeraude.chasqui.core.Node._
 import fr.univ_lille.cristal.emeraude.chasqui.core.causality.ErrorCausalityErrorStrategy
 import fr.univ_lille.cristal.emeraude.chasqui.core.synchronization.ManualSynchronizerStrategy
 import fr.univ_lille.cristal.emeraude.chasqui.core.typed.NodeActorWrapper
 
 import scala.collection.{Set, mutable}
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 
 /**
   * Created by guille on 10/04/17.
@@ -112,7 +109,6 @@ object NullNode extends Messaging {
     throw new UnsupportedOperationException("Message cannot be scheduled into a null node")
   }
 }
-
 
 abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrategy = new ErrorCausalityErrorStrategy) extends Actor with Node {
 
