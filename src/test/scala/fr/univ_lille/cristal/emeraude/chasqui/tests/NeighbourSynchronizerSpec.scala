@@ -1,7 +1,6 @@
 package fr.univ_lille.cristal.emeraude.chasqui.tests
 
 import fr.univ_lille.cristal.emeraude.chasqui.core.synchronization.{FinishedQuantum, GlobalSynchronizerStrategy, NeighbourSynchronizerStrategy}
-import fr.univ_lille.cristal.emeraude.chasqui.core.FinishedQuantum
 
 /**
   * Created by guille on 12/06/17.
