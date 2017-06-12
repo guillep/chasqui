@@ -26,7 +26,7 @@ class GlobalSynchronizerStrategy(system: ActorSystem) extends SynchronizerStrate
     SingletonService(system).instance
   }
 
-  override def handleSynchronizationMessage(message: SynchronizationMessage, sender: Messaging, receiver: Node, t: Long): Unit = {
+  override def handleSynchronizationMessage(message: SynchronizationMessage, sender: ActorRef, receiver: Node, t: Long): Unit = {
     //Nothing
   }
 }

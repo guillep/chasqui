@@ -2,6 +2,7 @@ package fr.univ_lille.cristal.emeraude.chasqui.core
 
 import java.util.UUID
 
+import akka.Done
 import akka.actor.{Actor, ActorRef}
 import akka.pattern.ask
 import akka.util.Timeout
@@ -33,7 +34,7 @@ object Node {
   case class ConnectTo(actor: ActorRef, role: String = "default")
   case class AddIngoingConnectionTo(actor: ActorRef, role: String)
 
-  case class ReceiveMessage(message: Any, sender: Messaging)
+  case class ReceiveMessage(message: Any, sender: ActorRef)
 
   case class SetTime(t: Long)
   object GetCurrentSimulationTime
@@ -63,21 +64,15 @@ object Node {
 trait Node extends Messaging {
   def setId(id: String)
 
-  def getIngoingConnections: Set[NodeActorWrapper]
+  def getIngoingConnections: Set[ActorRef]
 
-  def getIngoingConnections(role: String): Set[NodeActorWrapper]
+  def getIngoingConnections(role: String): Set[ActorRef]
 
-  def getOutgoingConnections: Set[NodeActorWrapper]
+  def getOutgoingConnections: Set[ActorRef]
 
   def getMessageTransferDeltaInCurrentQuantum(): Future[Int]
 
-  def blockingConnectTo(node: NodeActorWrapper, role: String = "default"): Option[_]
-
-  def connectTo(node: NodeActorWrapper, role: String = "default"): Unit
-
-  def addIngoingConnectionTo(node: NodeActorWrapper, role: String): Unit
-
-  def receiveMessage(message: Any, sender: Messaging): Unit
+  def receiveMessage(message: Any, sender: ActorRef): Unit
 
   def setTime(t: Long): Unit
 
@@ -117,111 +112,111 @@ object NullNode extends Messaging {
   }
 }
 
-class NodeActorWrapper(val actor: ActorRef) extends Node {
+class NodeActorWrapper(val actor: ActorRef) {
   import Node._
   implicit val timeout = Timeout(21474835 seconds)
 
-  override def setId(id: String): Unit = {
+  def setId(id: String): Unit = {
     actor ! SetId(id)
   }
 
-  override def getIngoingConnections: Set[NodeActorWrapper] = {
-    Await.result(actor ? GetIngoingConnections, Timeout(21474835 seconds).duration).asInstanceOf[Set[NodeActorWrapper]]
+  def getIngoingConnections: Set[ActorRef] = {
+    Await.result(actor ? GetIngoingConnections, Timeout(21474835 seconds).duration).asInstanceOf[Set[ActorRef]]
   }
 
-  override def getIngoingConnections(role: String): Set[NodeActorWrapper] = {
-    Await.result(actor ? GetIngoingConnections(role), Timeout(21474835 seconds).duration).asInstanceOf[Set[NodeActorWrapper]]
+  def getIngoingConnections(role: String): Set[ActorRef] = {
+    Await.result(actor ? GetIngoingConnections(role), Timeout(21474835 seconds).duration).asInstanceOf[Set[ActorRef]]
   }
 
-  override def getOutgoingConnections: Set[NodeActorWrapper] = {
-    Await.result(actor ? GetOutgoingConnections, Timeout(21474835 seconds).duration).asInstanceOf[Set[NodeActorWrapper]]
+  def getOutgoingConnections: Set[ActorRef] = {
+    Await.result(actor ? GetOutgoingConnections, Timeout(21474835 seconds).duration).asInstanceOf[Set[ActorRef]]
   }
 
-  override def getMessageTransferDeltaInCurrentQuantum(): Future[Int] = {
+  def getMessageTransferDeltaInCurrentQuantum(): Future[Int] = {
     (actor ? GetMessageTransferDeltaInCurrentQuantum).asInstanceOf[Future[Int]]
   }
 
-  override def blockingConnectTo(node: NodeActorWrapper, role: String): Option[_] = {
-    Await.result(actor ? GetOutgoingConnections, Timeout(21474835 seconds).duration).asInstanceOf[Option[_]]
+  def blockingConnectTo(node: NodeActorWrapper, role: String): Option[_] = {
+    Await.result(actor ? ConnectTo(node.actor, role), Timeout(21474835 seconds).duration).asInstanceOf[Option[_]]
   }
 
-  override def connectTo(node: NodeActorWrapper, role: String): Unit = {
+  def connectTo(node: NodeActorWrapper, role: String = "default"): Unit = {
     actor ! ConnectTo(node.actor, role)
   }
 
-  override def addIngoingConnectionTo(node: NodeActorWrapper, role: String): Unit = {
+  def addIngoingConnectionTo(node: NodeActorWrapper, role: String): Unit = {
     actor ! AddIngoingConnectionTo(node.actor, role)
   }
 
-  override def receiveMessage(message: Any, sender: Messaging): Unit = {
+  def receiveMessage(message: Any, sender: ActorRef): Unit = {
     actor ! ReceiveMessage(message, sender)
   }
 
-  override def setTime(t: Long): Unit = {
+  def setTime(t: Long): Unit = {
     actor ! SetTime(t)
   }
 
-  override def getCurrentSimulationTime(): Long = {
+  def getCurrentSimulationTime(): Long = {
     Await.result(actor ? GetCurrentSimulationTime, Timeout(21474835 seconds).duration).asInstanceOf[Long]
   }
 
-  override def setSynchronizerStrategy(synchronizerStrategy: SynchronizerStrategy): Unit = {
+  def setSynchronizerStrategy(synchronizerStrategy: SynchronizerStrategy): Unit = {
     actor ! SetSynchronizerStrategy(synchronizerStrategy)
   }
 
-  override def checkPendingMessagesInQueue(): Unit = {
+  def checkPendingMessagesInQueue(): Unit = {
     actor ! CheckPendingMessagesInQueue
   }
 
-  override def notifyFinishedQuantum(): Unit = {
+  def notifyFinishedQuantum(): Unit = {
     actor ! NotifyFinishedQuantum
   }
 
-  override def getRealIncomingQuantum(): Option[Long] = {
+  def getRealIncomingQuantum(): Option[Long] = {
     Await.result(this.getIncomingQuantum(), Timeout(21474835 seconds).duration)
   }
 
-  override def getIncomingQuantum(): Future[Option[Long]] = {
+  def getIncomingQuantum(): Future[Option[Long]] = {
     (actor ? GetIncomingQuantum).asInstanceOf[Future[Option[Long]]]
   }
 
-  override def advanceSimulationTime(): Unit = {
+  def advanceSimulationTime(): Unit = {
     actor ! AdvanceSimulationTime
   }
 
-  override def advanceSimulationTime(nextQuantum: Long): Unit = {
+  def advanceSimulationTime(nextQuantum: Long): Unit = {
     actor ! AdvanceSimulationTime(nextQuantum)
   }
 
-  override def scheduleSimulationAdvance(nextQuantum: Long): Unit = {
+  def scheduleSimulationAdvance(nextQuantum: Long): Unit = {
     this.advanceSimulationTime(nextQuantum)
   }
 
-  override def setCausalityErrorStrategy(causalityErrorStrategy: CausalityErrorStrategy): Unit = {
+  def setCausalityErrorStrategy(causalityErrorStrategy: CausalityErrorStrategy): Unit = {
     actor ! SetCausalityErrorStrategy(causalityErrorStrategy)
   }
 
-  override def getScheduledMessages: mutable.PriorityQueue[Message] = {
+  def getScheduledMessages: mutable.PriorityQueue[Message] = {
     Await.result(actor ? GetScheduledMessages, Timeout(21474835 seconds).duration).asInstanceOf[mutable.PriorityQueue[Message]]
   }
 
-  override def hasPendingMessages(): Boolean = {
+  def hasPendingMessages(): Boolean = {
     Await.result(actor ? HasPendingMessages, Timeout(21474835 seconds).duration).asInstanceOf[Boolean]
   }
 
-  override def hasPendingMessagesOfTimestamp(t: Long): Boolean = {
+  def hasPendingMessagesOfTimestamp(t: Long): Boolean = {
     Await.result(actor ? HasPendingMessagesOfTimestamp(t), Timeout(21474835 seconds).duration).asInstanceOf[Boolean]
   }
 
-  override def broadcastMessageToIncoming(message: Any, timestamp: Long): Unit = {
+  def broadcastMessageToIncoming(message: Any, timestamp: Long): Unit = {
     actor ! BroadcastMessageToIncoming(message, timestamp)
   }
 
-  override def sendMessage(receiver: ActorRef, timestamp: Long, message: Any): Any = {
+  def sendMessage(receiver: ActorRef, timestamp: Long, message: Any): Any = {
     actor ! SendMessage(receiver, message, timestamp)
   }
 
-  override def scheduleMessage(message: Any, timestamp: Long, sender: ActorRef): Unit = {
+  def scheduleMessage(message: Any, timestamp: Long, sender: ActorRef): Unit = {
     actor ! ScheduleMessage(message, timestamp, sender)
   }
 
@@ -247,63 +242,58 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
   private var currentSimulationTime: Long = 0
   private val messageQueue = scala.collection.mutable.PriorityQueue[Message]()(Ordering.fromLessThan((s1, s2) => s1.getTimestamp > s2.getTimestamp))
 
-  private val outgoingConnections = new scala.collection.mutable.HashMap[NodeActorWrapper, String]()
-  private val outgoingConnectionsByRole = new scala.collection.mutable.HashMap[String, mutable.HashSet[NodeActorWrapper]]()
-  private val ingoingConnections = new scala.collection.mutable.HashMap[NodeActorWrapper, String]()
-  private val ingoingConnectionsByRole = new scala.collection.mutable.HashMap[String, mutable.HashSet[NodeActorWrapper]]()
+  private val outgoingConnections = new scala.collection.mutable.HashMap[ActorRef, String]()
+  private val outgoingConnectionsByRole = new scala.collection.mutable.HashMap[String, mutable.HashSet[ActorRef]]()
+  private val ingoingConnections = new scala.collection.mutable.HashMap[ActorRef, String]()
+  private val ingoingConnectionsByRole = new scala.collection.mutable.HashMap[String, mutable.HashSet[ActorRef]]()
 
   private var sentMessagesInQuantum = 0
   private var receivedMessagesInQuantum = 0
 
-  def connectTo(node: NodeActorWrapper, role: String="default"): Unit = {
-    this.outgoingConnections += (node -> role)
+  def connectTo(target: ActorRef, role: String="default"): Unit = {
+    this.outgoingConnections += (target -> role)
     if (!this.outgoingConnectionsByRole.contains(role)){
-      this.outgoingConnectionsByRole += (role -> new mutable.HashSet[NodeActorWrapper]())
+      this.outgoingConnectionsByRole += (role -> new mutable.HashSet[ActorRef]())
     }
-    this.outgoingConnectionsByRole(role) += node
+    this.outgoingConnectionsByRole(role) += target
 
-    this.manageOutgoingConnectionTo(node, role)
-    node.addIngoingConnectionTo(wrapper, role)
+    this.manageOutgoingConnectionTo(target, role)
+    target ! AddIngoingConnectionTo(self, role)
   }
 
-  def blockingConnectTo(node: NodeActorWrapper, role: String="default"): Option[_] = {
-    this.connectTo(node, role)
-    Some(true)
-  }
-
-  protected def manageOutgoingConnectionTo(node: NodeActorWrapper, role: String): Unit ={
+  protected def manageOutgoingConnectionTo(node: ActorRef, role: String): Unit ={
     //Hook for subclasses
     //Do nothing by default
   }
 
-  def addIngoingConnectionTo(node: NodeActorWrapper, role: String): Unit = {
-    this.ingoingConnections += (node -> role)
+  def addIngoingConnectionTo(target: ActorRef, role: String): Unit = {
+    this.ingoingConnections += (target -> role)
     if (!this.ingoingConnectionsByRole.contains(role)){
-      this.ingoingConnectionsByRole += (role -> new mutable.HashSet[NodeActorWrapper]())
+      this.ingoingConnectionsByRole += (role -> new mutable.HashSet[ActorRef]())
     }
-    this.ingoingConnectionsByRole(role) += node
+    this.ingoingConnectionsByRole(role) += target
 
-    this.manageIngoingConnectionFrom(node)
+    this.manageIngoingConnectionFrom(target)
   }
 
-  protected def manageIngoingConnectionFrom(node: NodeActorWrapper): Unit ={
+  protected def manageIngoingConnectionFrom(node: ActorRef): Unit ={
     //Hook for subclasses
     //Do nothing by default
   }
 
-  def getOutgoingConnections: Set[NodeActorWrapper] = this.outgoingConnections.keySet
-  def getIngoingConnections: Set[NodeActorWrapper] = this.ingoingConnections.keySet
+  def getOutgoingConnections: Set[ActorRef] = this.outgoingConnections.keySet
+  def getIngoingConnections: Set[ActorRef] = this.ingoingConnections.keySet
   def getMessageTransferDeltaInCurrentQuantum(): Future[Int] = Future.successful(getMessageDeltaInQuantum)
 
-  def getOutgoingConnectionsWithRole(role: String): Set[NodeActorWrapper] = {
-    this.outgoingConnectionsByRole.getOrElse(role, new mutable.HashSet[NodeActorWrapper]())
+  def getOutgoingConnectionsWithRole(role: String): Set[ActorRef] = {
+    this.outgoingConnectionsByRole.getOrElse(role, new mutable.HashSet[ActorRef]())
   }
 
-  override def getIngoingConnections(role: String): Set[NodeActorWrapper] = {
-    this.ingoingConnectionsByRole.getOrElse(role, new mutable.HashSet[NodeActorWrapper]())
+  def getIngoingConnections(role: String): Set[ActorRef] = {
+    this.ingoingConnectionsByRole.getOrElse(role, new mutable.HashSet[ActorRef]())
   }
 
-  def ingoingConnectionsDo(role: String, function: (Node) => Unit): Unit = {
+  def ingoingConnectionsDo(role: String, function: (ActorRef) => Unit): Unit = {
     if (!this.ingoingConnectionsByRole.contains(role)) {
       return
     }
@@ -369,7 +359,7 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
     this.sentMessagesInQuantum - this.receivedMessagesInQuantum
   }
 
-  def queueMessage(message: Any, timestamp: Long, sender: Messaging): Unit = {
+  def queueMessage(message: Any, timestamp: Long, sender: ActorRef): Unit = {
     messageQueue += new Message(message, timestamp, sender)
   }
 
@@ -387,33 +377,31 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
   }
 
   def broadcastMessage(timestamp: Long, message: Any, roleToBroadcastTo: String = "default"): Unit = {
-    this.getOutgoingConnectionsWithRole(roleToBroadcastTo).foreach { node: NodeActorWrapper =>
-      this.sendMessage(node.actor, timestamp, message)
+    this.getOutgoingConnectionsWithRole(roleToBroadcastTo).foreach { node: ActorRef =>
+      this.sendMessage(node, timestamp, message)
     }
   }
 
   def broadcastMessageToIncoming(message: Any, timestamp: Long): Unit = {
-    this.getIngoingConnections.foreach { node: NodeActorWrapper =>
-      this.sendMessage(node.actor, timestamp, message)
+    this.getIngoingConnections.foreach { node: ActorRef =>
+      this.sendMessage(node, timestamp, message)
     }
   }
 
   def scheduleMessage(message: Any, timestamp: Long, senderActorRef: ActorRef): Unit = {
-
-    val sender = new NodeActorWrapper(senderActorRef)
     this.receivedMessagesInQuantum += 1
 
     if (timestamp < this.currentSimulationTime) {
       //The message is in the past.
       //This is a Causality error
-      causalityErrorStrategy.handleCausalityError(timestamp, this.currentSimulationTime, wrapper, sender, message)
+      causalityErrorStrategy.handleCausalityError(timestamp, this.currentSimulationTime, this, senderActorRef, message)
       return
     }
 
     if (this.currentSimulationTime == timestamp){
-      this.handleIncomingMessage(message, sender)
+      this.handleIncomingMessage(message, senderActorRef)
     } else {
-      this.queueMessage(message, timestamp, sender)
+      this.queueMessage(message, timestamp, senderActorRef)
     }
   }
 
@@ -421,12 +409,12 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
     this.causalityErrorStrategy = causalityErrorStrategy
   }
 
-  protected def handleIncomingMessage(message: Any, sender: Messaging): Unit = {
+  protected def handleIncomingMessage(message: Any, sender: ActorRef): Unit = {
     this.internalReceiveMessage(message, sender)
     //this.checkPendingMessagesInQueue()
   }
 
-  def internalReceiveMessage(message: Any, sender: Messaging): Unit = {
+  def internalReceiveMessage(message: Any, sender: ActorRef): Unit = {
     try{
       if (message.isInstanceOf[SynchronizationMessage]){
         this.synchronizerStrategy.handleSynchronizationMessage(message.asInstanceOf[SynchronizationMessage], sender, this, this.getCurrentSimulationTime())
@@ -437,7 +425,7 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
       case e: Throwable => throw new UnhandledChasquiException(this, message, sender, this.getCurrentSimulationTime(), e)
     }
   }
-  def receiveMessage(message: Any, sender: Messaging)
+  def receiveMessage(message: Any, sender: ActorRef)
 
   override def receive: Receive = {
     case "test" => sender ! "works"
@@ -446,8 +434,14 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
     case GetIngoingConnections(role) => sender ! this.getIngoingConnections(role)
     case GetOutgoingConnections => sender ! this.getOutgoingConnections
     case GetMessageTransferDeltaInCurrentQuantum => sender ! this.getMessageDeltaInQuantum
-    case ConnectTo(node, role) => this.connectTo(new NodeActorWrapper(node), role)
-    case AddIngoingConnectionTo(actor, role) => this.addIngoingConnectionTo(new NodeActorWrapper(actor), role)
+    case ConnectTo(node, role) => {
+      this.connectTo(node, role)
+      // For the blocking counterpart
+      // This will not really work because this message will dispatch a second asynchronous message
+      // to ${node} that will not wait
+      sender ! Done
+    }
+    case AddIngoingConnectionTo(actor, role) => this.addIngoingConnectionTo(actor, role)
     case ReceiveMessage(message, sender) => this.receiveMessage(message, sender)
     case SetTime(time) => this.setTime(time)
     case GetCurrentSimulationTime => sender ! this.getCurrentSimulationTime()

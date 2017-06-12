@@ -3,7 +3,7 @@ package fr.univ_lille.cristal.emeraude.chasqui.mocks
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
-import fr.univ_lille.cristal.emeraude.chasqui.core.{Messaging, Node, NodeActorWrapper, NodeImpl}
+import fr.univ_lille.cristal.emeraude.chasqui.core.{Node, NodeActorWrapper, NodeImpl}
 import fr.univ_lille.cristal.emeraude.chasqui.mocks.TestNodeWrapper.GetReceivedMessages
 
 import scala.collection.Set
@@ -29,7 +29,7 @@ trait TestNode extends Node {
 
 class TestNodeImpl extends NodeImpl with TestNode {
   val messages = new scala.collection.mutable.HashSet[Any]
-  override def receiveMessage(message: Any, sender: Messaging): Unit = {
+  override def receiveMessage(message: Any, sender: ActorRef): Unit = {
     messages.add(message)
   }
 

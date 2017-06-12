@@ -14,7 +14,7 @@ class ConnectionSpec extends ChasquiBaseSpec {
 
     nodeA.connectTo(nodeB)
 
-    nodeA.getOutgoingConnections should contain (nodeB)
+    nodeA.getOutgoingConnections should contain (nodeB.actor)
   }
 
   "A connection A->B" should "create an ingoing connection in B" in {
@@ -25,6 +25,6 @@ class ConnectionSpec extends ChasquiBaseSpec {
 
     Thread.sleep(500)
 
-    nodeB.getIngoingConnections should contain (nodeA)
+    nodeB.getIngoingConnections should contain (nodeA.actor)
   }
 }

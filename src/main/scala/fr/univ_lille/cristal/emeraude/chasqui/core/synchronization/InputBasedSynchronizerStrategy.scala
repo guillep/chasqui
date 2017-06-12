@@ -27,7 +27,7 @@ class InputBasedSynchronizerStrategy(system: ActorSystem) extends SynchronizerSt
     InputBasedSingletonService(system).instance
   }
 
-  override def handleSynchronizationMessage(message: SynchronizationMessage, sender: Messaging, receiver: Node, t: Long): Unit = {
+  override def handleSynchronizationMessage(message: SynchronizationMessage, sender: ActorRef, receiver: Node, t: Long): Unit = {
     //Nothing
   }
 }

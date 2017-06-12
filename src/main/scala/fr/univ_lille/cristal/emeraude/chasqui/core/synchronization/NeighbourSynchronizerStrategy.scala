@@ -13,7 +13,7 @@ case class FinishedQuantum(nextQuantum: Long) extends SynchronizationMessage
 
 class NeighbourSynchronizerStrategy extends SynchronizerStrategy {
 
-  val neighboursFinished: mutable.Set[Messaging] = new mutable.HashSet[Messaging]()
+  val neighboursFinished: mutable.Set[ActorRef] = new mutable.HashSet[ActorRef]()
 
   override def registerNode(node: ActorRef): Unit = {
     //Do nothing
@@ -25,7 +25,7 @@ class NeighbourSynchronizerStrategy extends SynchronizerStrategy {
     this.checkAdvanceSimulation(node, t)
   }
 
-  def handleSynchronizationMessage(message: SynchronizationMessage, sender: Messaging, receiver: Node, t: Long): Unit = {
+  def handleSynchronizationMessage(message: SynchronizationMessage, sender: ActorRef, receiver: Node, t: Long): Unit = {
     neighboursFinished += sender
     this.checkAdvanceSimulation(receiver, t)
   }

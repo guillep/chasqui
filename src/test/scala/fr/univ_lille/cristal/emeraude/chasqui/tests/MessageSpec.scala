@@ -1,8 +1,7 @@
 package fr.univ_lille.cristal.emeraude.chasqui.tests
 
-import fr.univ_lille.cristal.emeraude.chasqui.core.{CausalityErrorStrategy, NodeActorWrapper}
+import fr.univ_lille.cristal.emeraude.chasqui.core.CausalityErrorStrategy
 import org.mockito.Mockito.verify
-import org.mockito.ArgumentCaptor
 
 /**
   * Created by guille on 10/04/17.
@@ -93,15 +92,11 @@ class MessageSpec extends ChasquiBaseSpec {
     nodeA.sendMessage(nodeB.actor, 0, "message")
 
     Thread.sleep(500)
-    val wrapper1: ArgumentCaptor[NodeActorWrapper] = ArgumentCaptor.forClass(classOf[NodeActorWrapper])
-    val wrapper2: ArgumentCaptor[NodeActorWrapper] = ArgumentCaptor.forClass(classOf[NodeActorWrapper])
     verify(causalityErrorStrategy).handleCausalityError(
       org.mockito.ArgumentMatchers.eq(0L),
       org.mockito.ArgumentMatchers.eq(1L),
-      wrapper1.capture(),
-      wrapper2.capture(),
+      org.mockito.ArgumentMatchers.any(),
+      org.mockito.ArgumentMatchers.eq(nodeA.actor),
       org.mockito.ArgumentMatchers.eq("message"))
-    wrapper1.getValue.actor should be(nodeB.actor)
-    wrapper2.getValue.actor should be(nodeA.actor)
   }
 }
