@@ -1,4 +1,6 @@
-package fr.univ_lille.cristal.emeraude.chasqui.core
+package fr.univ_lille.cristal.emeraude.chasqui.core.causality
+
+import fr.univ_lille.cristal.emeraude.chasqui.core.{CausalityErrorStrategy, Messaging}
 
 /**
   * Created by guille on 10/04/17.

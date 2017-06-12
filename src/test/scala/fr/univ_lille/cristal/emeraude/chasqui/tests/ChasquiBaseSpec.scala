@@ -1,7 +1,7 @@
 package fr.univ_lille.cristal.emeraude.chasqui.tests
 
 import akka.actor.{ActorSystem, TypedActor, TypedProps}
-import fr.univ_lille.cristal.emeraude.chasqui.core.IgnoreCausalityErrorStrategy
+import fr.univ_lille.cristal.emeraude.chasqui.core.causality.IgnoreCausalityErrorStrategy
 import fr.univ_lille.cristal.emeraude.chasqui.mocks.{TestNode, TestNodeImpl}
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
@@ -21,6 +21,11 @@ class ChasquiBaseSpec extends FlatSpec with Matchers with MockitoSugar with Befo
   }
 
   def newNode: TestNode = TypedActor(system).typedActorOf(TypedProps[TestNodeImpl]())
+  def newNode(name: String): TestNode = {
+    val node: TestNode = TypedActor(system).typedActorOf(TypedProps[TestNodeImpl](), name=name)
+    node.setId(name)
+    node
+  }
 
   override def beforeEach() = {
     system = ActorSystem.create("test")

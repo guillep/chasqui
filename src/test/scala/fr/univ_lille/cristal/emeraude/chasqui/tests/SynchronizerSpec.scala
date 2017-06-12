@@ -21,6 +21,6 @@ class SynchronizerSpec extends ChasquiBaseSpec {
     //This is not the best way to test, because it may not scale in the future
     // but it's a practical and simple one to start with
     Thread.sleep(500)
-    verify(synchronizerStrategy).notifyFinishedTime(nodeA, 1, 0, 0)
+    verify(synchronizerStrategy).notifyFinishedTime(nodeA, nodeA, 1, 0, 0)
   }
 }

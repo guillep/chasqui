@@ -1,6 +1,6 @@
 package fr.univ_lille.cristal.emeraude.chasqui.tests
 
-import fr.univ_lille.cristal.emeraude.chasqui.core.GlobalSynchronizerStrategy
+import fr.univ_lille.cristal.emeraude.chasqui.core.synchronization.GlobalSynchronizerStrategy
 
 /**
   * Created by guille on 10/04/17.

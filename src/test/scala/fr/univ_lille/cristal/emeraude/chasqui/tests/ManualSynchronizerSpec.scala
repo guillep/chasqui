@@ -1,6 +1,7 @@
 package fr.univ_lille.cristal.emeraude.chasqui.tests
 
-import fr.univ_lille.cristal.emeraude.chasqui.core.{ManualSynchronizerStrategy, SynchronizerStrategy}
+import fr.univ_lille.cristal.emeraude.chasqui.core.SynchronizerStrategy
+import fr.univ_lille.cristal.emeraude.chasqui.core.synchronization.ManualSynchronizerStrategy
 import org.mockito.Mockito.verify
 
 /**

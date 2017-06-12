@@ -1,9 +1,10 @@
-package fr.univ_lille.cristal.emeraude.chasqui.core
+package fr.univ_lille.cristal.emeraude.chasqui.core.synchronization
 
 import java.util.concurrent.TimeUnit
 
 import akka.actor.{ActorSystem, ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider, TypedActor, TypedProps}
 import akka.util.Timeout
+import fr.univ_lille.cristal.emeraude.chasqui.core._
 
 import scala.concurrent.{Await, Future}
 
@@ -17,15 +18,15 @@ class GlobalSynchronizerStrategy(system: ActorSystem) extends SynchronizerStrate
     this.getSynchronizerActor().registerNode(node)
   }
 
-  def notifyFinishedTime(node: Node, t: Long, queueSize: Int, messageDelta: Int): Unit = {
-    this.getSynchronizerActor().notifyFinishedTime(node, t, queueSize, messageDelta)
+  def notifyFinishedTime(nodeActor: Node, node: Node, t: Long, queueSize: Int, messageDelta: Int): Unit = {
+    this.getSynchronizerActor().notifyFinishedTime(nodeActor, t, queueSize, messageDelta)
   }
 
   def getSynchronizerActor() = {
     SingletonService(system).instance
   }
 
-  override def handleSynchronizationMessage(message: SynchronizationMessage, sender: Messaging, receiver: Node): Unit = {
+  override def handleSynchronizationMessage(message: SynchronizationMessage, sender: Messaging, receiver: Node, t: Long): Unit = {
     //Nothing
   }
 }
