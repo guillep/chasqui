@@ -1,8 +1,10 @@
 package fr.univ_lille.cristal.emeraude.chasqui.core.typed
 
+import akka.Done
 import akka.actor.ActorRef
 import akka.util.Timeout
 import akka.pattern.ask
+
 import scala.concurrent.duration._
 import fr.univ_lille.cristal.emeraude.chasqui.core.{CausalityErrorStrategy, Message, Node, SynchronizerStrategy}
 
@@ -36,8 +38,8 @@ class TypedNode(val actor: ActorRef) {
     (actor ? GetMessageTransferDeltaInCurrentQuantum).asInstanceOf[Future[Int]]
   }
 
-  def blockingConnectTo(node: TypedNode, role: String): Option[_] = {
-    Await.result(actor ? ConnectTo(node.actor, role), Timeout(21474835 seconds).duration).asInstanceOf[Option[_]]
+  def blockingConnectTo(node: TypedNode, role: String): Done = {
+    Await.result(actor ? ConnectTo(node.actor, role), Timeout(21474835 seconds).duration).asInstanceOf[Done]
   }
 
   def connectTo(node: TypedNode, role: String = "default"): Unit = {

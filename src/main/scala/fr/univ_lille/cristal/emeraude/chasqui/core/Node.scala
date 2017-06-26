@@ -95,6 +95,7 @@ trait Node extends Messaging {
 
   def hasPendingMessagesOfTimestamp(t: Long): Boolean
 
+  def broadcastMessage(timestamp: Long, message: Any, roleToBroadcastTo: String = "default"): Unit
   def broadcastMessageToIncoming(message: Any, timestamp: Long): Unit
 
 }

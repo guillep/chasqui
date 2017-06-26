@@ -3,8 +3,8 @@ package fr.univ_lille.cristal.emeraude.chasqui.mocks
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
+import fr.univ_lille.cristal.emeraude.chasqui.core.NodeImpl
 import fr.univ_lille.cristal.emeraude.chasqui.core.typed.TypedNode
-import fr.univ_lille.cristal.emeraude.chasqui.core.{Node, NodeImpl}
 import fr.univ_lille.cristal.emeraude.chasqui.mocks.TypedTestNode.GetReceivedMessages
 
 import scala.collection.Set
@@ -14,7 +14,7 @@ import scala.concurrent.duration._
 /**
   * Created by guille on 10/04/17.
   */
-object TypedTestNode{
+object TypedTestNode {
   object GetReceivedMessages
 }
 
@@ -24,7 +24,7 @@ class TypedTestNode(actor: ActorRef) extends TypedNode(actor) with TestNode {
   }
 }
 
-trait TestNode extends Node {
+trait TestNode {
   def getReceivedMessages: Set[Any]
 }
 
