@@ -21,7 +21,7 @@ case class FinishedQuantumWithLookahead(finishedQuantum: Long = -1, nextQuantum:
   }
 }
 
-class NeighbourSynchronizerStrategyWithLookahead extends SynchronizerStrategy {
+class NeighbourSynchronizerStrategyWithLookahead() extends SynchronizerStrategy {
 
   val ingoingNeighboursFinished: mutable.HashMap[ActorRef, FinishedQuantumWithLookahead] = new mutable.HashMap[ActorRef, FinishedQuantumWithLookahead]()
 
@@ -36,7 +36,7 @@ class NeighbourSynchronizerStrategyWithLookahead extends SynchronizerStrategy {
 
   def notifyFinishedTime(nodeActor: ActorRef, node: Node, t: Long, queueSize: Int, messageDelta: Int): Unit = {
     node.broadcastMessageToOutgoing(FinishedQuantumWithLookahead(t, node.getRealIncomingQuantum()), t)
-    //this.checkAdvanceSimulation(node, t)
+    this.checkAdvanceSimulation(node, t)
   }
 
   def handleSynchronizationMessage(message: SynchronizationMessage, sender: ActorRef, receiver: Node, t: Long): Unit = {
@@ -45,7 +45,6 @@ class NeighbourSynchronizerStrategyWithLookahead extends SynchronizerStrategy {
   }
 
   private def checkAdvanceSimulation(receiver: Node, t: Long): Unit = {
-
     // All neighbours are finished with current quantum if:
     // - either they announced they finished and that they have no more pending messages (t=None)
     // - or they announced they finished a t >= current node simulation time

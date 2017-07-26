@@ -29,7 +29,12 @@ trait TestNode {
   def getReceivedMessages: Set[Any]
 }
 
-class TestNodeImpl extends NodeImpl with TestNode {
+class TestNodeImpl(automaticallyProcessQuantum: Boolean) extends NodeImpl with TestNode {
+
+  if (!automaticallyProcessQuantum){
+    this.doNotAutomaticallyProcessQuantum()
+  }
+
   val messages = new scala.collection.mutable.HashSet[Any]
   override def internalReceiveMessage(message: Any, sender: ActorRef): Unit = {
     messages.add(message)

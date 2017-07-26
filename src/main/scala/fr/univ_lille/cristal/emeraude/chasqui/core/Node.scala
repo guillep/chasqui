@@ -126,6 +126,16 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
 
   def getActorRef() = self
 
+  // For debugging and testing purposes
+  // Sometimes we want to force a node to not process messages as soon as it arrives to a new quantum
+  // Otherwise, it can loop and consume all its message queue
+  private var automaticallyProcessQuantum: Boolean = true
+
+  def doNotAutomaticallyProcessQuantum(): Node = {
+    this.automaticallyProcessQuantum = false
+    this
+  }
+
   private var synchronizerStrategy: SynchronizerStrategy = new ManualSynchronizerStrategy
   private var currentSimulationTime: Long = 0
   private val messageQueue = scala.collection.mutable.PriorityQueue[Message]()(Ordering.fromLessThan((s1, s2) => s1.getTimestamp > s2.getTimestamp))
@@ -207,7 +217,9 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
     this.currentSimulationTime = nextQuantum
     this.sentMessagesInQuantum = 0
     this.receivedMessagesInQuantum = 0
-    this.processNextQuantum()
+    if (this.automaticallyProcessQuantum){
+      this.processNextQuantum()
+    }
   }
 
   def scheduleSimulationAdvance(nextQuantum: Long): Unit = {

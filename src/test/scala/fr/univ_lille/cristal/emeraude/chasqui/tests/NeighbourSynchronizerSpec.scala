@@ -139,9 +139,9 @@ class NeighbourSynchronizerSpec extends ChasquiBaseSpec {
   }
 
   "A node with several ingoing neighbours" should "advance if one neighbour was already finished before" in {
-    val nodeA = newNode("NodeA")
-    val nodeB = newNode("NodeB")
-    val nodeC = newNode("NodeC")
+    val nodeA = newNode("NodeA", false)
+    val nodeB = newNode("NodeB", false)
+    val nodeC = newNode("NodeC", false)
 
     //Setup connections
     nodeA.connectTo(nodeC)
@@ -162,25 +162,32 @@ class NeighbourSynchronizerSpec extends ChasquiBaseSpec {
     //Second advancing to 9 tells NodeC that 9 is finished so he can advance to 17
     nodeA.scheduleMessage("message", 17, nodeA)
     nodeA.advanceSimulationTime(0)
-    nodeA.advanceSimulationTime(9)
+    nodeA.processNextQuantum()
+
+    Thread.sleep(1000)
 
     nodeB.scheduleMessage("message", 9, nodeA)
     nodeB.scheduleMessage("message", 17, nodeA)
     nodeB.advanceSimulationTime(0)
+    nodeB.processNextQuantum()
 
     Thread.sleep(1000)
     nodeC.getCurrentSimulationTime() should be(9)
 
+    nodeA.advanceSimulationTime(9)
+    nodeA.processNextQuantum()
     nodeB.advanceSimulationTime(9)
+    nodeB.processNextQuantum()
+
     Thread.sleep(1000)
     nodeC.getCurrentSimulationTime() should be(17)
   }
 
   "A node with several ingoing neighbours" should
       "advance if one neighbour was already finished and no other neighbours have messages" in {
-    val nodeA = newNode("NodeA")
-    val nodeB = newNode("NodeB")
-    val nodeC = newNode("NodeC")
+    val nodeA = newNode("NodeA", false)
+    val nodeB = newNode("NodeB", false)
+    val nodeC = newNode("NodeC", false)
 
     //Setup connections
     nodeA.connectTo(nodeC)
@@ -206,6 +213,7 @@ class NeighbourSynchronizerSpec extends ChasquiBaseSpec {
     nodeC.getCurrentSimulationTime() should be(9)
 
     nodeB.advanceSimulationTime(9)
+    nodeB.processNextQuantum()
     Thread.sleep(1000)
     nodeC.getCurrentSimulationTime() should be(17)
   }
@@ -231,6 +239,35 @@ class NeighbourSynchronizerSpec extends ChasquiBaseSpec {
     nodeA.notifyFinishedQuantum()
 
     Thread.sleep(1000)
+    nodeB.getCurrentSimulationTime() should be(7)
+  }
+
+  "A node cycle" should "advance together" in {
+    val nodeA = newNode("NodeA", false)
+    val nodeB = newNode("NodeB", false)
+
+    //Setup connection NodeA <-> NodeB
+    nodeA.connectTo(nodeB)
+    nodeB.connectTo(nodeA)
+
+    nodeA.setSynchronizerStrategy(new NeighbourSynchronizerStrategyWithLookahead())
+    nodeB.setSynchronizerStrategy(new NeighbourSynchronizerStrategyWithLookahead())
+
+    //Wait until all connections are set up
+    Thread.sleep(1000)
+
+    nodeA.setTime(0); nodeB.setTime(0)
+
+    nodeA.scheduleMessage("message", 17, nodeA)
+    nodeB.scheduleMessage("message", 7, nodeA)
+
+    nodeA.advanceSimulationTime(0)
+    nodeA.processNextQuantum()
+    nodeB.advanceSimulationTime(0)
+    nodeB.processNextQuantum()
+
+    Thread.sleep(1000)
+    nodeA.getCurrentSimulationTime() should be(7)
     nodeB.getCurrentSimulationTime() should be(7)
   }
 

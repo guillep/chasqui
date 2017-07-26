@@ -20,9 +20,9 @@ class ChasquiBaseSpec extends FlatSpec with Matchers with MockitoSugar with Befo
     node
   }
 
-  def newNode: TypedTestNode = new TypedTestNode(system.actorOf(Props[TestNodeImpl]()))
-  def newNode(name: String): TypedTestNode = {
-    val node = system.actorOf(Props[TestNodeImpl](), name=name)
+  def newNode: TypedTestNode = new TypedTestNode(system.actorOf(Props(new TestNodeImpl(true))))
+  def newNode(name: String, automaticallyProcessQuantum: Boolean = true): TypedTestNode = {
+    val node = system.actorOf(Props(new TestNodeImpl(automaticallyProcessQuantum)), name=name)
     val wrapper = new TypedTestNode(node)
     wrapper.setId(name)
     wrapper
