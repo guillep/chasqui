@@ -118,6 +118,10 @@ class TypedNode(val actor: ActorRef) {
     actor ! SendMessage(receiver, message, timestamp)
   }
 
+  def scheduleMessage(message: Any, timestamp: Long, node: TypedNode): Unit = {
+    this.scheduleMessage(message, timestamp, node.actor)
+  }
+
   def scheduleMessage(message: Any, timestamp: Long, sender: ActorRef): Unit = {
     actor ! ScheduleMessage(message, timestamp, sender)
   }

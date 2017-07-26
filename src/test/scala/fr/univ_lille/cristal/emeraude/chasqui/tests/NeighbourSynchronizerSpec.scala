@@ -1,111 +1,145 @@
 package fr.univ_lille.cristal.emeraude.chasqui.tests
 
-import fr.univ_lille.cristal.emeraude.chasqui.core.synchronization.{FinishedQuantum, NeighbourSynchronizerStrategy}
+import fr.univ_lille.cristal.emeraude.chasqui.core.synchronization.NeighbourSynchronizerStrategyWithLookahead
 
 /**
   * Created by guille on 12/06/17.
   */
 class NeighbourSynchronizerSpec extends ChasquiBaseSpec {
-
-  "A single node" should "not advance to next quantum if its neighbour is not ready" in {
+  "A node with a single ingoing neighbour" should "advance to the neighbour quantum" in {
     val nodeA = newNode("NodeA")
     val nodeB = newNode("NodeB")
-
-    nodeA.setSynchronizerStrategy(new NeighbourSynchronizerStrategy())
-    nodeB.setSynchronizerStrategy(new NeighbourSynchronizerStrategy())
 
     //Setup connection NodeA -> NodeB
     nodeA.connectTo(nodeB)
 
-    //Send three messages in the future
-    nodeA.sendMessage(nodeB.actor, 0, "test")
-    nodeA.sendMessage(nodeB.actor, 1, "test1")
-    nodeA.sendMessage(nodeB.actor, 2, "test2")
-    nodeA.sendMessage(nodeB.actor, 3, "test3")
+    nodeA.setSynchronizerStrategy(new NeighbourSynchronizerStrategyWithLookahead())
+    nodeB.setSynchronizerStrategy(new NeighbourSynchronizerStrategyWithLookahead())
 
-    Thread.sleep(500)
-    //This will process all message in time 1
-    //However, nodeA never starts/finishes the quantum
-    nodeB.checkPendingMessagesInQueue()
-
-    //We sleep here to wait the actor system to react
-    //This is not the best way to test, because it may not scale in the future
-    // but it's a practical and simple one to start with
+    //Wait until all connections are set up
     Thread.sleep(1000)
-    nodeB.getCurrentSimulationTime() should be(0)
+
+    //NodeB is at T=0 and schedules a message in the future T=17
+    nodeA.setTime(0); nodeB.setTime(0)
+    nodeA.scheduleMessage("message", 17, nodeA)
+    nodeA.notifyFinishedQuantum()
+
+    //Since NodeB, only outgoing neighbour of NodeA, is finished => NodeA can advance his simulation time
+    Thread.sleep(1000)
+    nodeB.getCurrentSimulationTime() should be(17)
   }
 
-  "A single node" should "advance to next quantum if its neighbour finished current quantum" in {
-    val nodeSender = newNode("SENDER")
-    val nodeReceiver = newNode("RECEIVER")
-    val nodeBlocker = newNode("Blocker")
+  "Several nodes with a single ingoing neighbours" should "advance to the neighbour quantum" in {
+    val nodeA = newNode("NodeA")
+    val nodeB = newNode("NodeB")
+    val nodeC = newNode("NodeC")
 
-    nodeSender.setSynchronizerStrategy(new NeighbourSynchronizerStrategy())
-    nodeReceiver.setSynchronizerStrategy(new NeighbourSynchronizerStrategy())
+    //Setup connection NodeA -> NodeB
+    nodeA.connectTo(nodeB)
+    nodeA.connectTo(nodeC)
 
-    //Setup connection NodeA <-> NodeB
-    nodeSender.connectTo(nodeReceiver)
-    nodeReceiver.connectTo(nodeSender)
-    nodeBlocker.connectTo(nodeSender)
+    nodeA.setSynchronizerStrategy(new NeighbourSynchronizerStrategyWithLookahead())
+    nodeB.setSynchronizerStrategy(new NeighbourSynchronizerStrategyWithLookahead())
+    nodeC.setSynchronizerStrategy(new NeighbourSynchronizerStrategyWithLookahead())
 
-    //Send message to A so A stays in t=1
-    nodeReceiver.sendMessage(nodeSender.actor, 1, "test")
-
-    //Send messages in the future for processing
-    nodeSender.sendMessage(nodeReceiver.actor, 0, "test")
-    nodeSender.sendMessage(nodeReceiver.actor, 1, "test1")
-    nodeSender.sendMessage(nodeReceiver.actor, 2, "test2")
-    nodeSender.sendMessage(nodeReceiver.actor, 3, "test3")
-
-    Thread.sleep(500)
-    //This will process all message in time 1
-    //However, nodeA never starts/finishes the quantum
-    nodeSender.broadcastMessageToIncoming(FinishedQuantum(0), 0)
-    nodeReceiver.checkPendingMessagesInQueue()
-
-    //We sleep here to wait the actor system to react
-    //This is not the best way to test, because it may not scale in the future
-    // but it's a practical and simple one to start with
+    //Wait until all connections are set up
     Thread.sleep(1000)
-    nodeReceiver.getCurrentSimulationTime() should be(1)
+
+    //NodeB is at T=0 and schedules a message in the future T=17
+    nodeA.setTime(0); nodeB.setTime(0); nodeC.setTime(0)
+    nodeA.scheduleMessage("message", 17, nodeA)
+    nodeA.notifyFinishedQuantum()
+
+    //Since NodeB, only outgoing neighbour of NodeA, is finished => NodeA can advance his simulation time
+    Thread.sleep(1000)
+    nodeB.getCurrentSimulationTime() should be(17)
+    nodeC.getCurrentSimulationTime() should be(17)
   }
 
-  "A single node" should "advance to next quantum several times if its neighbour finished current quantum" in {
-    val nodeSender = newNode("SENDER")
-    val nodeReceiver = newNode("RECEIVER")
-    val nodeBlocker = newNode("Blocker")
+  "A node with a several finished ingoing neighbours" should "advance to the neighbour quantum" in {
+    val nodeA = newNode("NodeA")
+    val nodeB = newNode("NodeB")
+    val nodeC = newNode("NodeC")
 
-    nodeSender.setSynchronizerStrategy(new NeighbourSynchronizerStrategy())
-    nodeReceiver.setSynchronizerStrategy(new NeighbourSynchronizerStrategy())
+    //Setup connections
+    nodeA.connectTo(nodeC)
+    nodeB.connectTo(nodeC)
 
-    //Setup connection NodeA <-> NodeB
-    nodeSender.connectTo(nodeReceiver)
-    nodeReceiver.connectTo(nodeSender)
-    nodeBlocker.connectTo(nodeSender)
+    nodeA.setSynchronizerStrategy(new NeighbourSynchronizerStrategyWithLookahead())
+    nodeB.setSynchronizerStrategy(new NeighbourSynchronizerStrategyWithLookahead())
+    nodeC.setSynchronizerStrategy(new NeighbourSynchronizerStrategyWithLookahead())
 
-    //Send message to A so A stays in t=1
-    nodeReceiver.sendMessage(nodeSender.actor, 1, "test")
-
-    //Send messages in the future for processing
-    nodeSender.sendMessage(nodeReceiver.actor, 0, "test")
-    nodeSender.sendMessage(nodeReceiver.actor, 1, "test1")
-    nodeSender.sendMessage(nodeReceiver.actor, 2, "test2")
-    nodeSender.sendMessage(nodeReceiver.actor, 3, "test3")
-    nodeSender.sendMessage(nodeReceiver.actor, 4, "test4")
-    nodeSender.sendMessage(nodeReceiver.actor, 5, "test5")
-
-    Thread.sleep(500)
-    //This will process all message in time 1
-    //However, nodeA never starts/finishes the quantum
-    nodeSender.broadcastMessageToIncoming(FinishedQuantum(0), 0)
-    nodeSender.broadcastMessageToIncoming(FinishedQuantum(1), 1)
-    nodeSender.broadcastMessageToIncoming(FinishedQuantum(2), 2)
-    nodeReceiver.checkPendingMessagesInQueue()
-
-    //We sleep here to wait the actor system to react
-    //This is not the best way to test, because it may not scale in the future
-    // but it's a practical and simple one to start with
+    //Wait until all connections are set up
     Thread.sleep(1000)
-    nodeReceiver.getCurrentSimulationTime() should be(3)
+
+    //NodeB is at T=0 and schedules a message in the future T=17
+    nodeA.setTime(0); nodeB.setTime(0); nodeC.setTime(0)
+
+    nodeA.scheduleMessage("message", 17, nodeA)
+    nodeA.notifyFinishedQuantum()
+
+    nodeB.scheduleMessage("message", 17, nodeA)
+    nodeB.notifyFinishedQuantum()
+
+    //Since NodeB, only outgoing neighbour of NodeA, is finished => NodeA can advance his simulation time
+    Thread.sleep(1000)
+    nodeC.getCurrentSimulationTime() should be(17)
+  }
+
+  "A node with a several finished ingoing neighbours" should "advance to the minimum neighbour quantum" in {
+    val nodeA = newNode("NodeA")
+    val nodeB = newNode("NodeB")
+    val nodeC = newNode("NodeC")
+
+    //Setup connections
+    nodeA.connectTo(nodeC)
+    nodeB.connectTo(nodeC)
+
+    nodeA.setSynchronizerStrategy(new NeighbourSynchronizerStrategyWithLookahead())
+    nodeB.setSynchronizerStrategy(new NeighbourSynchronizerStrategyWithLookahead())
+    nodeC.setSynchronizerStrategy(new NeighbourSynchronizerStrategyWithLookahead())
+
+    //Wait until all connections are set up
+    Thread.sleep(1000)
+
+    //NodeB is at T=0 and schedules a message in the future T=17
+    nodeA.setTime(0); nodeB.setTime(0); nodeC.setTime(0)
+
+    nodeA.scheduleMessage("message", 17, nodeA)
+    nodeA.notifyFinishedQuantum()
+
+    nodeB.scheduleMessage("message", 9, nodeA)
+    nodeB.notifyFinishedQuantum()
+
+    //Since NodeB, only outgoing neighbour of NodeA, is finished => NodeA can advance his simulation time
+    Thread.sleep(1000)
+    nodeC.getCurrentSimulationTime() should be(9)
+  }
+
+  "A node with several ingoing neighbours" should "not advance if one neighbour is not finished" in {
+    val nodeA = newNode("NodeA")
+    val nodeB = newNode("NodeB")
+    val nodeC = newNode("NodeC")
+
+    //Setup connections
+    nodeA.connectTo(nodeC)
+    nodeB.connectTo(nodeC)
+
+    nodeA.setSynchronizerStrategy(new NeighbourSynchronizerStrategyWithLookahead())
+    nodeB.setSynchronizerStrategy(new NeighbourSynchronizerStrategyWithLookahead())
+    nodeC.setSynchronizerStrategy(new NeighbourSynchronizerStrategyWithLookahead())
+
+    //Wait until all connections are set up
+    Thread.sleep(1000)
+
+    //NodeB is at T=0 and schedules a message in the future T=17
+    nodeA.setTime(0); nodeB.setTime(0); nodeC.setTime(0)
+
+    nodeA.scheduleMessage("message", 17, nodeA)
+    nodeA.notifyFinishedQuantum()
+
+    //Since NodeB, only outgoing neighbour of NodeA, is finished => NodeA can advance his simulation time
+    Thread.sleep(1000)
+    nodeC.getCurrentSimulationTime() should be(0)
   }
 }

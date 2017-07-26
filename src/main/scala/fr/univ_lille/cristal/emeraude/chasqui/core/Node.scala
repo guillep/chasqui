@@ -97,6 +97,7 @@ trait Node extends Messaging {
 
   def broadcastMessage(timestamp: Long, message: Any, roleToBroadcastTo: String = "default"): Unit
   def broadcastMessageToIncoming(message: Any, timestamp: Long): Unit
+  def broadcastMessageToOutgoing(message: Any, timestamp: Long): Unit
 
 }
 
@@ -187,7 +188,7 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
   }
   def getCurrentSimulationTime(): Long = this.currentSimulationTime
 
-  def setSynchronizerStrategy(synchronizerStrategy: SynchronizerStrategy): Unit ={
+  def setSynchronizerStrategy(synchronizerStrategy: SynchronizerStrategy): Unit = {
     this.synchronizerStrategy = synchronizerStrategy
     this.synchronizerStrategy.registerNode(self)
   }
@@ -263,6 +264,12 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
     }
   }
 
+  def broadcastMessageToOutgoing(message: Any, timestamp: Long): Unit = {
+    this.getOutgoingConnections.foreach { node: ActorRef =>
+      this.sendMessage(node, timestamp, message)
+    }
+  }
+
   def broadcastMessageToIncoming(message: Any, timestamp: Long): Unit = {
     this.getIngoingConnections.foreach { node: ActorRef =>
       this.sendMessage(node, timestamp, message)
@@ -309,7 +316,6 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
   def receiveMessage(message: Any, sender: ActorRef)
 
   override def receive: Receive = {
-    case "test" => sender ! "works"
     case SetId(id) => this.setId(id)
     case GetIngoingConnections => sender ! this.getIngoingConnections
     case GetIngoingConnections(role) => sender ! this.getIngoingConnections(role)
@@ -322,11 +328,15 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
       // to ${node} that will not wait
       sender ! Done
     }
-    case AddIngoingConnectionTo(actor, role) => this.addIngoingConnectionTo(actor, role)
+    case AddIngoingConnectionTo(actor, role) => {
+      this.addIngoingConnectionTo(actor, role)
+    }
     case ReceiveMessage(message, sender) => this.receiveMessage(message, sender)
     case SetTime(time) => this.setTime(time)
     case GetCurrentSimulationTime => sender ! this.getCurrentSimulationTime()
-    case SetSynchronizerStrategy(strategy) => this.setSynchronizerStrategy(strategy)
+    case SetSynchronizerStrategy(strategy) => {
+      this.setSynchronizerStrategy(strategy)
+    }
     case CheckPendingMessagesInQueue => this.checkPendingMessagesInQueue()
     case NotifyFinishedQuantum => this.notifyFinishedQuantum()
     case GetIncomingQuantum => sender ! this.getRealIncomingQuantum()

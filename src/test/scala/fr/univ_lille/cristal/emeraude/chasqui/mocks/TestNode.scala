@@ -30,8 +30,13 @@ trait TestNode {
 
 class TestNodeImpl extends NodeImpl with TestNode {
   val messages = new scala.collection.mutable.HashSet[Any]
-  override def receiveMessage(message: Any, sender: ActorRef): Unit = {
+  override def internalReceiveMessage(message: Any, sender: ActorRef): Unit = {
     messages.add(message)
+    super.internalReceiveMessage(message, sender)
+  }
+
+  override def receiveMessage(message: Any, sender: ActorRef): Unit = {
+    //Do nothing
   }
 
   def getReceivedMessages: Set[Any] = messages.toSet
@@ -39,4 +44,5 @@ class TestNodeImpl extends NodeImpl with TestNode {
   override def receive = super.receive orElse {
     case GetReceivedMessages => sender ! this.getReceivedMessages
   }
+
 }
