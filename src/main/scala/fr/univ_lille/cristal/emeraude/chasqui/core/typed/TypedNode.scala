@@ -70,6 +70,14 @@ class TypedNode(val actor: ActorRef) {
     actor ! CheckPendingMessagesInQueue
   }
 
+  def processNextMessage(): Unit = {
+    actor ! ProcessNextMessage
+  }
+
+  def processNextQuantum(): Unit = {
+    actor ! ProcessNextQuantum
+  }
+
   def notifyFinishedQuantum(): Unit = {
     actor ! NotifyFinishedQuantum
   }

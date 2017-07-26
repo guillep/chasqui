@@ -19,6 +19,7 @@ object TypedTestNode {
 }
 
 class TypedTestNode(actor: ActorRef) extends TypedNode(actor) with TestNode {
+
   override def getReceivedMessages: Set[Any] = {
     Await.result(actor ? GetReceivedMessages, Timeout(21474835 seconds).duration).asInstanceOf[Set[Any]]
   }

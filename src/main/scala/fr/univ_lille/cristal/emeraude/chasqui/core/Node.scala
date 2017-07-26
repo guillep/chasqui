@@ -39,7 +39,10 @@ object Node {
   case class SetCausalityErrorStrategy(causalityErrorStrategy: CausalityErrorStrategy)
   case class SetSynchronizerStrategy(strategy: SynchronizerStrategy)
 
+  object ProcessNextMessage
+  object ProcessNextQuantum
   object CheckPendingMessagesInQueue
+
   object NotifyFinishedQuantum
   object GetIncomingQuantum
   object AdvanceSimulationTime
@@ -75,7 +78,8 @@ trait Node extends Messaging {
 
   def getCurrentSimulationTime(): Long
   def setSynchronizerStrategy(synchronizerStrategy: SynchronizerStrategy): Unit
-  def checkPendingMessagesInQueue(): Unit
+  def processNextQuantum(): Unit
+  def processNextMessage(): Unit
   def notifyFinishedQuantum(): Unit
 
   def getRealIncomingQuantum(): Option[Long]
@@ -201,7 +205,7 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
     this.currentSimulationTime = nextQuantum
     this.sentMessagesInQuantum = 0
     this.receivedMessagesInQuantum = 0
-    this.checkPendingMessagesInQueue()
+    this.processNextQuantum()
   }
 
   def scheduleSimulationAdvance(nextQuantum: Long): Unit = {
@@ -219,18 +223,39 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
     }
   }
 
+  /****************************************************************************
+  *  Checking messages
+  ****************************************************************************/
+
   /**
     * Get all elements in the same priority and remove them from the message queue
     * TODO: In a very big recursion this could create a stack overflow
     */
-  def checkPendingMessagesInQueue() = {
-    val currentTimestampMessages = new mutable.Queue[Message]()
+  def processNextQuantum() = {
     while (this.messageQueue.nonEmpty && this.messageQueue.head.getTimestamp == this.currentSimulationTime) {
-      currentTimestampMessages.enqueue(this.messageQueue.dequeue())
+      this.uncheckedProcessNextMessage()
     }
-    currentTimestampMessages.foreach(m => this.internalReceiveMessage(m.getMessage, m.getSender))
-
     this.notifyFinishedQuantum()
+  }
+
+  def uncheckedProcessNextMessage(): Message = {
+    val message = this.messageQueue.dequeue()
+    this.internalReceiveMessage(message.getMessage, message.getSender)
+    message
+  }
+
+  def processNextMessage() = {
+    if (this.messageQueue.isEmpty) {
+      throw new UnsupportedOperationException("No more messages to process")
+    }
+    this.uncheckedProcessNextMessage()
+    this.verifyFinishedQuantum()
+  }
+
+  private def verifyFinishedQuantum() = {
+    if (this.currentSimulationTime < this.messageQueue.head.getTimestamp) {
+      this.notifyFinishedQuantum()
+    }
   }
 
   def notifyFinishedQuantum(): Unit = {
@@ -328,17 +353,18 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
       // to ${node} that will not wait
       sender ! Done
     }
-    case AddIngoingConnectionTo(actor, role) => {
+    case AddIngoingConnectionTo(actor, role) =>
       this.addIngoingConnectionTo(actor, role)
-    }
     case ReceiveMessage(message, sender) => this.receiveMessage(message, sender)
     case SetTime(time) => this.setTime(time)
     case GetCurrentSimulationTime => sender ! this.getCurrentSimulationTime()
-    case SetSynchronizerStrategy(strategy) => {
-      this.setSynchronizerStrategy(strategy)
-    }
-    case CheckPendingMessagesInQueue => this.checkPendingMessagesInQueue()
+    case SetSynchronizerStrategy(strategy) => this.setSynchronizerStrategy(strategy)
+
+    case ProcessNextMessage => this.processNextMessage()
+    case ProcessNextQuantum => this.processNextQuantum()
+    case CheckPendingMessagesInQueue => this.processNextQuantum()
     case NotifyFinishedQuantum => this.notifyFinishedQuantum()
+
     case GetIncomingQuantum => sender ! this.getRealIncomingQuantum()
     case AdvanceSimulationTime => this.advanceSimulationTime()
     case AdvanceSimulationTime(nextQuantum) => this.advanceSimulationTime(nextQuantum)
