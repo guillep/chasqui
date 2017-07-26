@@ -13,11 +13,11 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 /**
   * Created by guille on 19/04/17.
   */
-class GlobalSynchronizerStrategy(system: ActorSystem) extends SynchronizerStrategy{
+class GlobalSynchronizerStrategy(system: ActorSystem) extends SynchronizerStrategy {
 
 
-  def registerNode(node: ActorRef): Unit = {
-    this.getSynchronizerActor().registerNode(node)
+  def registerNode(node: Node): Unit = {
+    this.getSynchronizerActor().registerNode(node.getActorRef())
   }
 
   def notifyFinishedTime(nodeActorRef: ActorRef, node: Node, t: Long, queueSize: Int, messageDelta: Int): Unit = {

@@ -15,7 +15,7 @@ class NeighbourSynchronizerStrategy extends SynchronizerStrategy {
 
   val neighboursFinished: mutable.Set[ActorRef] = new mutable.HashSet[ActorRef]()
 
-  override def registerNode(node: ActorRef): Unit = {
+  override def registerNode(node: Node): Unit = {
     //Do nothing
     //We do not track any node
   }

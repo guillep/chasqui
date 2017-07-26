@@ -7,7 +7,7 @@ import fr.univ_lille.cristal.emeraude.chasqui.core.{Node, SynchronizationMessage
   * Created by guille on 19/04/17.
   */
 class ManualSynchronizerStrategy extends SynchronizerStrategy {
-  override def registerNode(self: ActorRef): Unit = {
+  override def registerNode(node: Node): Unit = {
     //Do nothing
     //We do not track any node
   }

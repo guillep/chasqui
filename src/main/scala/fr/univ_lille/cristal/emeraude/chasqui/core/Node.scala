@@ -63,6 +63,7 @@ object Node {
 
 trait Node extends Messaging {
   def setId(id: String)
+  def getActorRef(): ActorRef
 
   def getIngoingConnections: Set[ActorRef]
 
@@ -118,11 +119,12 @@ object NullNode extends Messaging {
 abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrategy = new ErrorCausalityErrorStrategy) extends Actor with Node {
 
   protected var id = UUID.randomUUID().toString
-
   def getId = id
   def setId(id: String) = this.id = id
 
   override def toString = super.toString + s"(${this.id})"
+
+  def getActorRef() = self
 
   private var synchronizerStrategy: SynchronizerStrategy = new ManualSynchronizerStrategy
   private var currentSimulationTime: Long = 0
@@ -194,7 +196,7 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
 
   def setSynchronizerStrategy(synchronizerStrategy: SynchronizerStrategy): Unit = {
     this.synchronizerStrategy = synchronizerStrategy
-    this.synchronizerStrategy.registerNode(self)
+    this.synchronizerStrategy.registerNode(this)
   }
 
   def advanceSimulationTime(): Unit = {

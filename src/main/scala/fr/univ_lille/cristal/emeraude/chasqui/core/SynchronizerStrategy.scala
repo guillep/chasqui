@@ -8,7 +8,7 @@ import akka.actor.ActorRef
 class SynchronizationMessage
 
 trait SynchronizerStrategy {
-  def registerNode(nodeActorRef: ActorRef): Unit
+  def registerNode(node: Node): Unit
   def notifyFinishedTime(nodeActorRef: ActorRef, node: Node, t: Long, queueSize: Int, messageDelta: Int): Unit
   def handleSynchronizationMessage(message: SynchronizationMessage, sender: ActorRef, receiver: Node, t: Long): Unit
 }
