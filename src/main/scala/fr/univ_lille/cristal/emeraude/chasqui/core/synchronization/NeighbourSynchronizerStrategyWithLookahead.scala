@@ -59,7 +59,6 @@ class NeighbourSynchronizerStrategyWithLookahead() extends SynchronizerStrategy 
               case Nil => None
               case xs => Some(xs.min)
             } })
-      println(s"$ingoingNeighboursFinished ${receiver.getRealIncomingQuantum()} $nextQuantum")
       if (nextQuantum.isDefined){
         receiver.scheduleSimulationAdvance(nextQuantum.get)
       }
