@@ -10,4 +10,6 @@ class Message(message: Any, timestamp: Long, sender: ActorRef) {
   def getTimestamp: Long = timestamp
   def getSender: ActorRef = sender
   def getMessage: Any = message
+
+  override def toString: String = s"Message($message, at: $timestamp, from: $sender)"
 }
