@@ -5,7 +5,6 @@ import akka.pattern.ask
 import akka.util.Timeout
 import fr.univ_lille.cristal.emeraude.chasqui.core.NodeImpl
 import fr.univ_lille.cristal.emeraude.chasqui.core.typed.TypedNode
-import fr.univ_lille.cristal.emeraude.chasqui.mocks.TypedTestNode.GetReceivedMessages
 
 import scala.collection.Set
 import scala.concurrent.Await
@@ -14,12 +13,12 @@ import scala.concurrent.duration._
 /**
   * Created by guille on 10/04/17.
   */
-object TypedTestNode {
+object TestNode {
   object GetReceivedMessages
 }
 
 class TypedTestNode(actor: ActorRef) extends TypedNode(actor) with TestNode {
-
+  import TestNode._
   override def getReceivedMessages: Set[Any] = {
     Await.result(actor ? GetReceivedMessages, Timeout(21474835 seconds).duration).asInstanceOf[Set[Any]]
   }
@@ -30,6 +29,7 @@ trait TestNode {
 }
 
 class TestNodeImpl(automaticallyProcessQuantum: Boolean) extends NodeImpl with TestNode {
+  import TestNode._
 
   if (!automaticallyProcessQuantum){
     this.doNotAutomaticallyProcessQuantum()
