@@ -4,7 +4,9 @@ import fr.univ_lille.cristal.emeraude.chasqui.core.CausalityErrorStrategy
 import org.mockito.Mockito.verify
 
 /**
-  * Created by guille on 10/04/17.
+  * This class tests how messages flow between nodes.
+  * This tests do not test node synchronization.
+  * Node synchronization is done manually.
   */
 class MessageSpec extends ChasquiBaseSpec {
 
@@ -46,7 +48,7 @@ class MessageSpec extends ChasquiBaseSpec {
     nodeA.sendMessage(nodeB.actor, 3, "message")
 
     Thread.sleep(500)
-    nodeB.advanceSimulationTime()
+    nodeB.advanceSimulationTime(1)
     nodeB.getReceivedMessages should be ('empty)
   }
 
@@ -57,7 +59,6 @@ class MessageSpec extends ChasquiBaseSpec {
     nodeA.sendMessage(nodeB.actor, 3, "message")
 
     Thread.sleep(500)
-    nodeB.advanceSimulationTime()
     nodeB.advanceSimulationTime()
     nodeB.getReceivedMessages should contain ("message")
   }

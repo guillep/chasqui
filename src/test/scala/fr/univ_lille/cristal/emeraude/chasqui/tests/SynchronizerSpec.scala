@@ -16,7 +16,7 @@ class SynchronizerSpec extends ChasquiBaseSpec {
     nodeA.setSynchronizerStrategy(synchronizerStrategy)
 
     //This will process all message in time 1 and inform it finished to its synchronizer strategy
-    nodeA.advanceSimulationTime()
+    nodeA.processNextQuantum()
 
     //We sleep here to wait the actor system to react
     //This is not the best way to test, because it may not scale in the future
@@ -24,11 +24,11 @@ class SynchronizerSpec extends ChasquiBaseSpec {
     Thread.sleep(500)
 
     verify(synchronizerStrategy).notifyFinishedTime(
-      org.mockito.ArgumentMatchers.eq(nodeA.actor),
-      ArgumentMatchers.any(),
-      org.mockito.ArgumentMatchers.eq(1L),
-      org.mockito.ArgumentMatchers.eq(0),
-      org.mockito.ArgumentMatchers.eq(0))
+      org.mockito.ArgumentMatchers.eq(nodeA.actor), //Sender actor
+      ArgumentMatchers.any(),                       //Node object
+      org.mockito.ArgumentMatchers.eq(0L),          //Simulation T
+      org.mockito.ArgumentMatchers.eq(0),           //Number of scheduled messages
+      org.mockito.ArgumentMatchers.eq(0))           //Message delta (sent - received)
 
   }
 }

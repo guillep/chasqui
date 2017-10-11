@@ -72,7 +72,7 @@ class MessageSynchronizerImpl extends MessageSynchronizer {
     if (allNodesReady && allMessagesInThisQuantumProcessed && (this.messagesToBeProcessedFollowingQuantums != 0)) {
       this.nodesFinishedThisQuantum.clear()
       this.messagesToBeProcessedFollowingQuantums = 0
-      this.nodes.foreach(node => node ! AdvanceSimulationTime)
+      this.nodes.foreach(node => node ! AdvanceSimulationTime(t + 1))
     }
   }
 }

@@ -1,8 +1,6 @@
 package fr.univ_lille.cristal.emeraude.chasqui.tests
 
-import fr.univ_lille.cristal.emeraude.chasqui.core.SynchronizerStrategy
 import fr.univ_lille.cristal.emeraude.chasqui.core.synchronization.ManualSynchronizerStrategy
-import org.mockito.Mockito.verify
 
 /**
   * Created by guille on 10/04/17.
@@ -14,9 +12,11 @@ class ManualSynchronizerSpec extends ChasquiBaseSpec {
 
     nodeA.setSynchronizerStrategy(new ManualSynchronizerStrategy)
 
-    //This will process all message in time 1 and inform it finished to its synchronizer strategy
-    nodeA.advanceSimulationTime()
+    //This will process all messages in time 1 and inform it finished to its synchronizer strategy
+    nodeA.processNextQuantum()
 
-    nodeA.getCurrentSimulationTime() should be(1)
+    //Manual synchronizer strategy will not advance simulation time automatically.
+    //Simulation time will stay in 0
+    nodeA.getCurrentSimulationTime() should be(0)
   }
 }
