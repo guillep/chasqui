@@ -130,8 +130,12 @@ class TypedNode(val actor: ActorRef) {
     this.scheduleMessage(message, timestamp, node.actor)
   }
 
-  def scheduleMessage(message: Any, timestamp: Long, sender: ActorRef): Unit = {
+  def scheduleMessage(message: Any, timestamp: Long, sender: ActorRef = ActorRef.noSender): Unit = {
     actor ! ScheduleMessage(message, timestamp, sender)
+  }
+
+  def start() = {
+    actor ! Start
   }
 
   override def equals(obj: scala.Any): Boolean = {

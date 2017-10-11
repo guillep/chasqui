@@ -39,6 +39,7 @@ object Node {
   case class SetCausalityErrorStrategy(causalityErrorStrategy: CausalityErrorStrategy)
   case class SetSynchronizerStrategy(strategy: SynchronizerStrategy)
 
+  object Start
   object ProcessNextMessage
   object ProcessNextQuantum
   object CheckPendingMessagesInQueue
@@ -86,7 +87,6 @@ trait Node extends Messaging {
   def getRealIncomingQuantum(): Option[Long]
   def getIncomingQuantum(): Future[Option[Long]]
 
-  def advanceSimulationTime(): Unit
   def advanceSimulationTime(nextQuantum: Long): Unit
   def scheduleSimulationAdvance(nextQuantum: Long): Unit
 
@@ -209,10 +209,6 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
     this.synchronizerStrategy.registerNode(this)
   }
 
-  def advanceSimulationTime(): Unit = {
-    this.advanceSimulationTime(this.currentSimulationTime + 1)
-  }
-
   def advanceSimulationTime(nextQuantum: Long): Unit = {
     this.currentSimulationTime = nextQuantum
     this.sentMessagesInQuantum = 0
@@ -332,6 +328,14 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
     }
   }
 
+  /**
+    * Starts a simulation:
+    * Process the current node quantum and wait for synchronization instructions
+    */
+  def start(): Unit = {
+    this.scheduleSimulationAdvance(this.getCurrentSimulationTime())
+  }
+
   def setCausalityErrorStrategy(causalityErrorStrategy: CausalityErrorStrategy): Unit = {
     this.causalityErrorStrategy = causalityErrorStrategy
   }
@@ -374,14 +378,17 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
     case GetCurrentSimulationTime => sender ! this.getCurrentSimulationTime()
     case SetSynchronizerStrategy(strategy) => this.setSynchronizerStrategy(strategy)
 
+    case Start => this.start()
     case ProcessNextMessage => this.processNextMessage()
     case ProcessNextQuantum => this.processNextQuantum()
     case CheckPendingMessagesInQueue => this.processNextQuantum()
     case NotifyFinishedQuantum => this.notifyFinishedQuantum()
 
+
     case GetIncomingQuantum => sender ! this.getRealIncomingQuantum()
-    case AdvanceSimulationTime => this.advanceSimulationTime()
+    case AdvanceSimulationTime => this.advanceSimulationTime(this.getRealIncomingQuantum().get)
     case AdvanceSimulationTime(nextQuantum) => this.advanceSimulationTime(nextQuantum)
+
     case SetCausalityErrorStrategy(strategy) => this.setCausalityErrorStrategy(strategy)
     case GetScheduledMessages => sender ! this.getScheduledMessages
     case HasPendingMessages => sender ! this.hasPendingMessages()
