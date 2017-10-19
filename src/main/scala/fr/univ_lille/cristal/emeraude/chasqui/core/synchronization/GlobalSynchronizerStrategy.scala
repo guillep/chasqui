@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 import akka.actor.{ActorRef, ActorSystem, ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider, TypedActor, TypedProps}
 import akka.pattern.ask
 import akka.util.Timeout
-import fr.univ_lille.cristal.emeraude.chasqui.core.Node.{AdvanceSimulationTime, GetIncomingQuantum, GetMessageTransferDeltaInCurrentQuantum, ProcessNextQuantum}
+import fr.univ_lille.cristal.emeraude.chasqui.core.Node._
 import fr.univ_lille.cristal.emeraude.chasqui.core._
 
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -15,7 +15,8 @@ import scala.util._
   * Created by guille on 19/04/17.
   */
 class GlobalSynchronizerStrategy(system: ActorSystem) extends SynchronizerStrategy {
-
+  var sentMessagesInQuantum = 0
+  var receivedMessagesInQuantum = 0
 
   def registerNode(node: Node): Unit = {
     this.getSynchronizerActor().registerNode(node.getActorRef)
@@ -31,6 +32,31 @@ class GlobalSynchronizerStrategy(system: ActorSystem) extends SynchronizerStrate
 
   override def handleSynchronizationMessage(message: SynchronizationMessage, sender: ActorRef, receiver: Node, t: Long): Unit = {
     //Nothing
+  }
+
+  override def sendMessage(senderNode: NodeImpl, receiverActor: ActorRef, messageTimestamp: Long, message: Any): Unit = {
+    this.sentMessagesInQuantum += 1
+    receiverActor ! ScheduleMessage(message, messageTimestamp, senderNode.getActorRef)
+  }
+
+  override def scheduleMessage(receiverNode: NodeImpl, senderActor: ActorRef, messageTimestamp: Long, message: Any): Unit = {
+    this.receivedMessagesInQuantum += 1
+
+    if (messageTimestamp < receiverNode.getCurrentSimulationTime) {
+      //The message is in the past.
+      //This is a Causality error
+      if (!message.isInstanceOf[SynchronizationMessage]){
+        receiverNode.getCausalityErrorStrategy.handleCausalityError(messageTimestamp, receiverNode.getCurrentSimulationTime, receiverNode, senderActor, message)
+      }
+      return
+    }
+
+    if (receiverNode.getCurrentSimulationTime == messageTimestamp){
+      receiverNode.handleIncomingMessage(message, senderActor)
+    } else {
+      receiverNode.queueMessage(message, messageTimestamp, senderActor)
+    }
+    receiverNode.notifyFinishedQuantum()
   }
 }
 

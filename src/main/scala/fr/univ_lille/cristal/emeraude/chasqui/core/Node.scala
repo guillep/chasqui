@@ -127,7 +127,6 @@ object NullNode extends Messaging {
 }
 
 abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrategy = new ErrorCausalityErrorStrategy) extends Actor with Node {
-
   def log(s: String): Unit = {
     //TODO: implement logging system
     //println(s)
@@ -314,8 +313,7 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
 
   def sendMessage(receiver: ActorRef, timestamp: Long, message: Any): Any = {
     this.log(s"| sent | $self | $receiver| $currentSimulationTime | $message |")
-    this.sentMessagesInQuantum += 1
-    receiver ! ScheduleMessage(message, timestamp, self)
+    this.synchronizerStrategy.sendMessage(this, receiver, timestamp, message)
   }
 
   def broadcastMessage(timestamp: Long, message: Any, roleToBroadcastTo: String = "default"): Unit = {
@@ -338,23 +336,7 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
 
   def scheduleMessage(message: Any, timestamp: Long, senderActorRef: ActorRef): Unit = {
     this.log(s"| received | $senderActorRef | $self | $currentSimulationTime | $message |")
-    this.receivedMessagesInQuantum += 1
-
-    if (timestamp < this.currentSimulationTime) {
-      //The message is in the past.
-      //This is a Causality error
-      if (!message.isInstanceOf[SynchronizationMessage]){
-        causalityErrorStrategy.handleCausalityError(timestamp, this.currentSimulationTime, this, senderActorRef, message)
-      }
-      return
-    }
-
-    if (this.currentSimulationTime == timestamp){
-      this.handleIncomingMessage(message, senderActorRef)
-    } else {
-      this.queueMessage(message, timestamp, senderActorRef)
-    }
-    this.notifyFinishedQuantum()
+    this.synchronizerStrategy.scheduleMessage(this, senderActorRef, timestamp, message)
   }
 
   /**
@@ -368,11 +350,12 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
     this.scheduleSimulationAdvance(this.getCurrentSimulationTime)
   }
 
+  def getCausalityErrorStrategy = this.causalityErrorStrategy
   def setCausalityErrorStrategy(causalityErrorStrategy: CausalityErrorStrategy): Unit = {
     this.causalityErrorStrategy = causalityErrorStrategy
   }
 
-  protected def handleIncomingMessage(message: Any, sender: ActorRef): Unit = {
+  def handleIncomingMessage(message: Any, sender: ActorRef): Unit = {
     this.internalReceiveMessage(message, sender)
     //this.checkPendingMessagesInQueue()
   }

@@ -1,6 +1,7 @@
 package fr.univ_lille.cristal.emeraude.chasqui.core.synchronization
 
 import akka.actor.ActorRef
+import fr.univ_lille.cristal.emeraude.chasqui.core.Node.ScheduleMessage
 import fr.univ_lille.cristal.emeraude.chasqui.core._
 
 import scala.collection.mutable
@@ -36,5 +37,27 @@ class NeighbourSynchronizerStrategy extends SynchronizerStrategy {
       neighboursFinished.clear()
       receiver.scheduleSimulationAdvance(t + 1)
     }
+  }
+
+  override def sendMessage(senderNode: NodeImpl, receiverActor: ActorRef, messageTimestamp: Long, message: Any): Unit = {
+    receiverActor ! ScheduleMessage(message, messageTimestamp, senderNode.getActorRef)
+  }
+
+  override def scheduleMessage(receiverNode: NodeImpl, senderActor: ActorRef, messageTimestamp: Long, message: Any): Unit = {
+    if (messageTimestamp < receiverNode.getCurrentSimulationTime) {
+      //The message is in the past.
+      //This is a Causality error
+      if (!message.isInstanceOf[SynchronizationMessage]){
+        receiverNode.getCausalityErrorStrategy.handleCausalityError(messageTimestamp, receiverNode.getCurrentSimulationTime, receiverNode, senderActor, message)
+      }
+      return
+    }
+
+    if (receiverNode.getCurrentSimulationTime == messageTimestamp){
+      receiverNode.handleIncomingMessage(message, senderActor)
+    } else {
+      receiverNode.queueMessage(message, messageTimestamp, senderActor)
+    }
+    receiverNode.notifyFinishedQuantum()
   }
 }
