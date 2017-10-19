@@ -1,6 +1,6 @@
 package fr.univ_lille.cristal.emeraude.chasqui.tests
 
-import fr.univ_lille.cristal.emeraude.chasqui.core.synchronization.GlobalSynchronizerStrategy
+import fr.univ_lille.cristal.emeraude.chasqui.core.synchronization.GlobalSynchronizerWithLocalQueueStrategy
 
 /**
   * Created by guille on 10/04/17.
@@ -8,8 +8,8 @@ import fr.univ_lille.cristal.emeraude.chasqui.core.synchronization.GlobalSynchro
 class GlobalSynchronizerSpec extends ChasquiBaseSpec {
 
   "Two global synchronizer strategies" should "use the same global synchronizer actor" in {
-    val strategy1 = new GlobalSynchronizerStrategy(system)
-    val strategy2 = new GlobalSynchronizerStrategy(system)
+    val strategy1 = new GlobalSynchronizerWithLocalQueueStrategy(system)
+    val strategy2 = new GlobalSynchronizerWithLocalQueueStrategy(system)
 
     strategy1.getSynchronizerActor() should be(strategy2.getSynchronizerActor())
   }
@@ -18,8 +18,8 @@ class GlobalSynchronizerSpec extends ChasquiBaseSpec {
     val nodeA = newNode("NodeA")
     val nodeB = newNode("NodeB")
 
-    nodeA.setSynchronizerStrategy(new GlobalSynchronizerStrategy(system))
-    nodeB.setSynchronizerStrategy(new GlobalSynchronizerStrategy(system))
+    nodeA.setSynchronizerStrategy(new GlobalSynchronizerWithLocalQueueStrategy(system))
+    nodeB.setSynchronizerStrategy(new GlobalSynchronizerWithLocalQueueStrategy(system))
 
     //Send three messages in the future
     nodeB.sendMessage(nodeA.actor, 1, "test")
@@ -42,8 +42,8 @@ class GlobalSynchronizerSpec extends ChasquiBaseSpec {
     val nodeA = newNode
     val nodeB = newNode
 
-    nodeA.setSynchronizerStrategy(new GlobalSynchronizerStrategy(system))
-    nodeB.setSynchronizerStrategy(new GlobalSynchronizerStrategy(system))
+    nodeA.setSynchronizerStrategy(new GlobalSynchronizerWithLocalQueueStrategy(system))
+    nodeB.setSynchronizerStrategy(new GlobalSynchronizerWithLocalQueueStrategy(system))
 
     //Send three messages in the future
     nodeB.sendMessage(nodeA.actor, 1, "test")
@@ -69,8 +69,8 @@ class GlobalSynchronizerSpec extends ChasquiBaseSpec {
     val nodeA = newNode
     val nodeB = newNode
 
-    nodeA.setSynchronizerStrategy(new GlobalSynchronizerStrategy(system))
-    nodeB.setSynchronizerStrategy(new GlobalSynchronizerStrategy(system))
+    nodeA.setSynchronizerStrategy(new GlobalSynchronizerWithLocalQueueStrategy(system))
+    nodeB.setSynchronizerStrategy(new GlobalSynchronizerWithLocalQueueStrategy(system))
 
     //Send three messages in the future
     nodeB.sendMessage(nodeA.actor, 1, "test")
@@ -95,8 +95,8 @@ class GlobalSynchronizerSpec extends ChasquiBaseSpec {
     val nodeA = newNode
     val nodeB = newNode
 
-    nodeA.setSynchronizerStrategy(new GlobalSynchronizerStrategy(system))
-    nodeB.setSynchronizerStrategy(new GlobalSynchronizerStrategy(system))
+    nodeA.setSynchronizerStrategy(new GlobalSynchronizerWithLocalQueueStrategy(system))
+    nodeB.setSynchronizerStrategy(new GlobalSynchronizerWithLocalQueueStrategy(system))
 
     //Send three messages in the future
     nodeB.sendMessage(nodeA.actor, 1, "test")
@@ -118,8 +118,8 @@ class GlobalSynchronizerSpec extends ChasquiBaseSpec {
     val nodeA = newNode
     val nodeB = newNode
 
-    nodeA.setSynchronizerStrategy(new GlobalSynchronizerStrategy(system))
-    nodeB.setSynchronizerStrategy(new GlobalSynchronizerStrategy(system))
+    nodeA.setSynchronizerStrategy(new GlobalSynchronizerWithLocalQueueStrategy(system))
+    nodeB.setSynchronizerStrategy(new GlobalSynchronizerWithLocalQueueStrategy(system))
 
     //Send three messages in the future
     nodeB.sendMessage(nodeA.actor, 1, "test")

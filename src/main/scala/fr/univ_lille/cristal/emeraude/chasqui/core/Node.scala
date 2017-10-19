@@ -291,9 +291,7 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
   private def getMessageDeltaInQuantum: Int = {
     this.sentMessagesInQuantum - this.receivedMessagesInQuantum
   }
-
-  def getScheduledMessages: mutable.PriorityQueue[Message] = this.getMessageQueue
-
+  
   def sendMessage(receiver: ActorRef, timestamp: Long, message: Any): Any = {
     this.log(s"| sent | $self | $receiver| $currentSimulationTime | $message |")
     this.synchronizerStrategy.sendMessage(this, receiver, timestamp, message)

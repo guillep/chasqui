@@ -14,7 +14,7 @@ import scala.util._
 /**
   * Created by guille on 19/04/17.
   */
-class GlobalSynchronizerStrategy(system: ActorSystem) extends SynchronizerStrategy {
+class GlobalSynchronizerWithLocalQueueStrategy(system: ActorSystem) extends SynchronizerStrategy {
   private var sentMessagesInQuantum = 0
   private var receivedMessagesInQuantum = 0
 
@@ -29,7 +29,7 @@ class GlobalSynchronizerStrategy(system: ActorSystem) extends SynchronizerStrate
   }
 
   def getSynchronizerActor() = {
-    SingletonService(system).instance
+    GlobalSynchronizerWithLocalQueueStrategyAccessor(system).instance
   }
 
   override def handleSynchronizationMessage(message: SynchronizationMessage, sender: ActorRef, receiver: Node, t: Long): Unit = {
@@ -149,15 +149,10 @@ class GlobalSynchronizerSingleton[T <: AnyRef, TImpl <: T](system: ActorSystem, 
   val instance: T = TypedActor(system).typedActorOf[T, TImpl](props, name)
 }
 
-trait SystemScoped extends ExtensionId[GlobalSynchronizerSingleton[MessageSynchronizer, GlobalSynchronizerSingletonActor]] with ExtensionIdProvider {
+object GlobalSynchronizerWithLocalQueueStrategyAccessor extends ExtensionId[GlobalSynchronizerSingleton[MessageSynchronizer, GlobalSynchronizerSingletonActor]] with ExtensionIdProvider {
   final override def lookup = this
   final override def createExtension(system: ExtendedActorSystem) = new GlobalSynchronizerSingleton(system, instanceProps, instanceName)
 
-  protected def instanceProps: TypedProps[GlobalSynchronizerSingletonActor]
-  protected def instanceName: String
-}
-
-object SingletonService extends SystemScoped {
-  override lazy val instanceProps = TypedProps[GlobalSynchronizerSingletonActor]()
-  override lazy val instanceName = "global-synchronizer-actor"
+  lazy val instanceProps = TypedProps[GlobalSynchronizerSingletonActor]()
+  lazy val instanceName = "global-synchronizer-actor"
 }
