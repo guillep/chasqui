@@ -74,7 +74,7 @@ object Node {
 
 trait Node extends Messaging {
   def setId(id: String)
-  def getActorRef(): ActorRef
+  def getActorRef: ActorRef
 
   def getIngoingConnections: Set[ActorRef]
 
@@ -82,20 +82,20 @@ trait Node extends Messaging {
 
   def getOutgoingConnections: Set[ActorRef]
 
-  def getMessageTransferDeltaInCurrentQuantum(): Future[Int]
+  def getMessageTransferDeltaInCurrentQuantum: Future[Int]
 
   def receiveMessage(message: Any, sender: ActorRef): Unit
 
   def setTime(t: Long): Unit
 
-  def getCurrentSimulationTime(): Long
+  def getCurrentSimulationTime: Long
   def setSynchronizerStrategy(synchronizerStrategy: SynchronizerStrategy): Unit
   def processNextQuantum(): Unit
   def processNextMessage(): Unit
   def notifyFinishedQuantum(): Unit
 
-  def getRealIncomingQuantum(): Option[Long]
-  def getIncomingQuantum(): Future[Option[Long]]
+  def getRealIncomingQuantum: Option[Long]
+  def getIncomingQuantum: Future[Option[Long]]
 
   def advanceSimulationTime(nextQuantum: Long): Unit
   def scheduleSimulationAdvance(nextQuantum: Long): Unit
@@ -106,7 +106,7 @@ trait Node extends Messaging {
 
   def isReady: Future[Boolean] = Future.successful(true)
 
-  def hasPendingMessages(): Boolean
+  def hasPendingMessages: Boolean
 
   def hasPendingMessagesOfTimestamp(t: Long): Boolean
 
@@ -128,21 +128,21 @@ object NullNode extends Messaging {
 
 abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrategy = new ErrorCausalityErrorStrategy) extends Actor with Node {
 
-  def log(s: String) = {
+  def log(s: String): Unit = {
     //TODO: implement logging system
     //println(s)
   }
 
-  protected var id = UUID.randomUUID().toString
-  def getId = id
-  def setId(id: String) = this.id = id
+  protected var id: String = UUID.randomUUID().toString
+  def getId: String = id
+  def setId(id: String): Unit = this.id = id
 
   protected var status = "Not started"
-  def setStatus(s: String) = this.status = s
+  def setStatus(s: String): Unit = this.status = s
 
-  override def toString = super.toString + s"(${id}, ${status})"
+  override def toString: String = super.toString + s"($id, $status)"
 
-  def getActorRef() = self
+  def getActorRef: ActorRef = self
 
   // For debugging and testing purposes
   // Sometimes we want to force a node to not process messages as soon as it arrives to a new quantum
@@ -199,7 +199,7 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
 
   def getOutgoingConnections: Set[ActorRef] = this.outgoingConnections.keySet
   def getIngoingConnections: Set[ActorRef] = this.ingoingConnections.keySet
-  def getMessageTransferDeltaInCurrentQuantum(): Future[Int] = Future.successful(getMessageDeltaInQuantum)
+  def getMessageTransferDeltaInCurrentQuantum: Future[Int] = Future.successful(getMessageDeltaInQuantum)
 
   def getOutgoingConnectionsWithRole(role: String): Set[ActorRef] = {
     this.outgoingConnectionsByRole.getOrElse(role, new mutable.HashSet[ActorRef]())
@@ -220,7 +220,7 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
   def setTime(t: Long): Unit = {
     this.currentSimulationTime = t
   }
-  def getCurrentSimulationTime(): Long = this.currentSimulationTime
+  def getCurrentSimulationTime: Long = this.currentSimulationTime
 
   def setSynchronizerStrategy(synchronizerStrategy: SynchronizerStrategy): Unit = {
     this.synchronizerStrategy = synchronizerStrategy
@@ -241,11 +241,11 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
     self ! ProcessNextQuantum
   }
 
-  def getIncomingQuantum(): Future[Option[Long]] = {
-    Future.successful(this.getRealIncomingQuantum())
+  def getIncomingQuantum: Future[Option[Long]] = {
+    Future.successful(this.getRealIncomingQuantum)
   }
 
-  def getRealIncomingQuantum(): Option[Long] = {
+  def getRealIncomingQuantum: Option[Long] = {
     if (this.messageQueue.isEmpty) { None }
     else {
       Some(this.messageQueue.head.getTimestamp)
@@ -260,14 +260,14 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
     * Get all elements in the same priority and remove them from the message queue
     * TODO: In a very big recursion this could create a stack overflow
     */
-  def processNextQuantum() = {
+  def processNextQuantum(): Unit = {
     while (this.hasMessagesForThisQuantum) {
       this.uncheckedProcessNextMessage()
     }
     this.notifyFinishedQuantum()
   }
 
-  def hasMessagesForThisQuantum = {
+  def hasMessagesForThisQuantum: Boolean = {
     this.messageQueue.nonEmpty && this.messageQueue.head.getTimestamp == this.currentSimulationTime
   }
 
@@ -277,7 +277,7 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
     this.internalReceiveMessage(message.getMessage, message.getSender)
   }
 
-  def processNextMessage() = {
+  def processNextMessage(): Unit = {
     if (this.messageQueue.isEmpty) {
       throw new UnsupportedOperationException("No more messages to process")
     }
@@ -306,10 +306,10 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
 
   def getScheduledMessages: mutable.PriorityQueue[Message] = this.messageQueue
 
-  def hasPendingMessages(): Boolean = this.messageQueue.nonEmpty
+  def hasPendingMessages: Boolean = this.messageQueue.nonEmpty
 
   def hasPendingMessagesOfTimestamp(t: Long): Boolean = {
-    this.hasPendingMessages() && this.messageQueue.head.getTimestamp == t
+    this.hasPendingMessages && this.messageQueue.head.getTimestamp == t
   }
 
   def sendMessage(receiver: ActorRef, timestamp: Long, message: Any): Any = {
@@ -365,7 +365,7 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
     assert(this.currentSimulationTime == 0)
     assert(this.receivedMessagesInQuantum == 0)
     assert(this.sentMessagesInQuantum == 0)
-    this.scheduleSimulationAdvance(this.getCurrentSimulationTime())
+    this.scheduleSimulationAdvance(this.getCurrentSimulationTime)
   }
 
   def setCausalityErrorStrategy(causalityErrorStrategy: CausalityErrorStrategy): Unit = {
@@ -379,13 +379,14 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
 
   def internalReceiveMessage(message: Any, sender: ActorRef): Unit = {
     try{
-      if (message.isInstanceOf[SynchronizationMessage]){
-        this.synchronizerStrategy.handleSynchronizationMessage(message.asInstanceOf[SynchronizationMessage], sender, this, this.getCurrentSimulationTime())
-      }else {
-        this.receiveMessage(message, sender)
+      message match {
+        case synchronizationMessage: SynchronizationMessage =>
+          this.synchronizerStrategy.handleSynchronizationMessage(synchronizationMessage, sender, this, this.getCurrentSimulationTime)
+        case _ =>
+          this.receiveMessage(message, sender)
       }
     }catch{
-      case e: Throwable => throw new UnhandledChasquiException(this, message, sender, this.getCurrentSimulationTime(), e)
+      case e: Throwable => throw new UnhandledChasquiException(this, message, sender, this.getCurrentSimulationTime, e)
     }
   }
   def receiveMessage(message: Any, sender: ActorRef)
@@ -397,18 +398,17 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
     case GetIngoingConnections(role) => sender ! this.getIngoingConnections(role)
     case GetOutgoingConnections => sender ! this.getOutgoingConnections
     case GetMessageTransferDeltaInCurrentQuantum => sender ! this.getMessageDeltaInQuantum
-    case ConnectTo(node, role) => {
+    case ConnectTo(node, role) =>
       this.connectTo(node, role)
       // For the blocking counterpart
       // This will not really work because this message will dispatch a second asynchronous message
       // to ${node} that will not wait
       sender ! Done
-    }
     case AddIngoingConnectionTo(actor, role) =>
       this.addIngoingConnectionTo(actor, role)
     case ReceiveMessage(message, sender) => this.receiveMessage(message, sender)
     case SetTime(time) => this.setTime(time)
-    case GetCurrentSimulationTime => sender ! this.getCurrentSimulationTime()
+    case GetCurrentSimulationTime => sender ! this.getCurrentSimulationTime
     case SetSynchronizerStrategy(strategy) => this.setSynchronizerStrategy(strategy)
 
     case Start => this.start()
@@ -418,16 +418,15 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
     case NotifyFinishedQuantum => this.notifyFinishedQuantum()
 
 
-    case GetIncomingQuantum => sender ! this.getRealIncomingQuantum()
+    case GetIncomingQuantum => sender ! this.getRealIncomingQuantum
     //case AdvanceSimulationTime => this.advanceSimulationTime(this.getRealIncomingQuantum().get)
-    case AdvanceSimulationTime(nextQuantum) => {
+    case AdvanceSimulationTime(nextQuantum) =>
       this.advanceSimulationTime(nextQuantum)
       sender ! nextQuantum
-    }
 
     case SetCausalityErrorStrategy(strategy) => this.setCausalityErrorStrategy(strategy)
     case GetScheduledMessages => sender ! this.getScheduledMessages
-    case HasPendingMessages => sender ! this.hasPendingMessages()
+    case HasPendingMessages => sender ! this.hasPendingMessages
     case HasPendingMessagesOfTimestamp(timestamp) => this.hasPendingMessagesOfTimestamp(timestamp)
     case BroadcastMessageToIncoming(message, timestamp) => this.broadcastMessage(timestamp, message)
     case SendMessage(receiver, message, timestamp) => this.sendMessage(receiver, timestamp, message)
