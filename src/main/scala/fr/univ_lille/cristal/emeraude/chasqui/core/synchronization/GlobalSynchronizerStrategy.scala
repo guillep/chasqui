@@ -15,8 +15,10 @@ import scala.util._
   * Created by guille on 19/04/17.
   */
 class GlobalSynchronizerStrategy(system: ActorSystem) extends SynchronizerStrategy {
-  var sentMessagesInQuantum = 0
-  var receivedMessagesInQuantum = 0
+  private var sentMessagesInQuantum = 0
+  private var receivedMessagesInQuantum = 0
+
+  private val messageQueue = scala.collection.mutable.PriorityQueue[Message]()(Ordering.fromLessThan((s1, s2) => s1.getTimestamp > s2.getTimestamp))
 
   def registerNode(node: Node): Unit = {
     this.getSynchronizerActor().registerNode(node.getActorRef)
@@ -54,14 +56,16 @@ class GlobalSynchronizerStrategy(system: ActorSystem) extends SynchronizerStrate
     if (receiverNode.getCurrentSimulationTime == messageTimestamp){
       receiverNode.handleIncomingMessage(message, senderActor)
     } else {
-      queueMessage(receiverNode, senderActor, messageTimestamp, message)
+      this.queueMessage(senderActor, messageTimestamp, message)
     }
     receiverNode.notifyFinishedQuantum()
   }
 
-  private def queueMessage(receiverNode: NodeImpl, senderActor: ActorRef, messageTimestamp: Long, message: Any) = {
-    receiverNode.queueMessage(message, messageTimestamp, senderActor)
+  private def queueMessage(senderActor: ActorRef, messageTimestamp: Long, message: Any) = {
+    messageQueue += new Message(message, messageTimestamp, senderActor)
   }
+
+  override def getMessageQueue: scala.collection.mutable.PriorityQueue[Message] = this.messageQueue
 }
 
 trait MessageSynchronizer {

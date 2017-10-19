@@ -155,7 +155,6 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
 
   private var synchronizerStrategy: SynchronizerStrategy = new ManualSynchronizerStrategy
   private var currentSimulationTime: Long = 0
-  private val messageQueue = scala.collection.mutable.PriorityQueue[Message]()(Ordering.fromLessThan((s1, s2) => s1.getTimestamp > s2.getTimestamp))
 
   private val outgoingConnections = new scala.collection.mutable.HashMap[ActorRef, String]()
   private val outgoingConnectionsByRole = new scala.collection.mutable.HashMap[String, mutable.HashSet[ActorRef]]()
@@ -255,7 +254,7 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
   *  Checking messages
   ****************************************************************************/
 
-  def getMessageQueue = this.messageQueue
+  def getMessageQueue = this.synchronizerStrategy.getMessageQueue
 
   /**
     * Get all elements in the same priority and remove them from the message queue
@@ -299,10 +298,6 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
 
   private def getMessageDeltaInQuantum: Int = {
     this.sentMessagesInQuantum - this.receivedMessagesInQuantum
-  }
-
-  def queueMessage(message: Any, timestamp: Long, sender: ActorRef): Unit = {
-    messageQueue += new Message(message, timestamp, sender)
   }
 
   def getScheduledMessages: mutable.PriorityQueue[Message] = this.getMessageQueue

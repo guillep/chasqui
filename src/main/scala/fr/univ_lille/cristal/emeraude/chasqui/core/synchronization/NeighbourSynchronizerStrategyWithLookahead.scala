@@ -24,6 +24,7 @@ case class FinishedQuantumWithLookahead(finishedQuantum: Long = -1, nextQuantum:
 
 class NeighbourSynchronizerStrategyWithLookahead() extends SynchronizerStrategy {
 
+  private val messageQueue = scala.collection.mutable.PriorityQueue[Message]()(Ordering.fromLessThan((s1, s2) => s1.getTimestamp > s2.getTimestamp))
   val finishedTs = new mutable.HashSet[Long]()
   val ingoingNeighboursFinished: mutable.HashMap[ActorRef, FinishedQuantumWithLookahead] = new mutable.HashMap[ActorRef, FinishedQuantumWithLookahead]()
 
@@ -91,12 +92,14 @@ class NeighbourSynchronizerStrategyWithLookahead() extends SynchronizerStrategy 
     if (receiverNode.getCurrentSimulationTime == messageTimestamp){
       receiverNode.handleIncomingMessage(message, senderActor)
     } else {
-      queueMessage(receiverNode, senderActor, messageTimestamp, message)
+      this.queueMessage(senderActor, messageTimestamp, message)
     }
     receiverNode.notifyFinishedQuantum()
   }
 
-  private def queueMessage(receiverNode: NodeImpl, senderActor: ActorRef, messageTimestamp: Long, message: Any) = {
-    receiverNode.queueMessage(message, messageTimestamp, senderActor)
+  private def queueMessage(senderActor: ActorRef, messageTimestamp: Long, message: Any) = {
+    messageQueue += new Message(message, messageTimestamp, senderActor)
   }
+
+  override def getMessageQueue: mutable.PriorityQueue[Message] = this.messageQueue
 }

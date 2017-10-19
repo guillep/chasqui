@@ -2,7 +2,9 @@ package fr.univ_lille.cristal.emeraude.chasqui.core.synchronization
 
 import akka.actor.ActorRef
 import fr.univ_lille.cristal.emeraude.chasqui.core.Node.ScheduleMessage
-import fr.univ_lille.cristal.emeraude.chasqui.core.{Node, NodeImpl, SynchronizationMessage, SynchronizerStrategy}
+import fr.univ_lille.cristal.emeraude.chasqui.core._
+
+import scala.collection.mutable
 
 /**
   * Created by guille on 19/04/17.
@@ -38,4 +40,6 @@ class ManualSynchronizerStrategy extends SynchronizerStrategy {
     receiverNode.handleIncomingMessage(message, senderActor)
     receiverNode.notifyFinishedQuantum()
   }
+
+  override def getMessageQueue = new mutable.PriorityQueue[Message]()(Ordering.fromLessThan((s1, s2) => true))
 }

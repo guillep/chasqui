@@ -14,6 +14,7 @@ case class FinishedQuantum(nextQuantum: Long) extends SynchronizationMessage
 
 class NeighbourSynchronizerStrategy extends SynchronizerStrategy {
 
+  private val messageQueue = scala.collection.mutable.PriorityQueue[Message]()(Ordering.fromLessThan((s1, s2) => s1.getTimestamp > s2.getTimestamp))
   val neighboursFinished: mutable.Set[ActorRef] = new mutable.HashSet[ActorRef]()
 
   override def registerNode(node: Node): Unit = {
@@ -56,12 +57,14 @@ class NeighbourSynchronizerStrategy extends SynchronizerStrategy {
     if (receiverNode.getCurrentSimulationTime == messageTimestamp){
       receiverNode.handleIncomingMessage(message, senderActor)
     } else {
-      queueMessage(receiverNode, senderActor, messageTimestamp, message)
+      this.queueMessage(senderActor, messageTimestamp, message)
     }
     receiverNode.notifyFinishedQuantum()
   }
 
-  private def queueMessage(receiverNode: NodeImpl, senderActor: ActorRef, messageTimestamp: Long, message: Any) = {
-    receiverNode.queueMessage(message, messageTimestamp, senderActor)
+  private def queueMessage(senderActor: ActorRef, messageTimestamp: Long, message: Any) = {
+    this.messageQueue += new Message(message, messageTimestamp, senderActor)
   }
+
+  override def getMessageQueue = this.messageQueue
 }

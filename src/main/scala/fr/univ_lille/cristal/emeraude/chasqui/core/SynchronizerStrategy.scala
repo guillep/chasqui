@@ -14,4 +14,6 @@ trait SynchronizerStrategy {
 
   def sendMessage(senderNode: NodeImpl, receiverActor: ActorRef, messageTimestamp: Long, message: Any): Unit
   def scheduleMessage(receiverNode: NodeImpl, senderActor: ActorRef, messageTimestamp: Long, message: Any): Unit
+
+  def getMessageQueue: scala.collection.mutable.PriorityQueue[Message]
 }
