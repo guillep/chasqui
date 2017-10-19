@@ -52,8 +52,6 @@ object Node {
   case class AdvanceSimulationTime(quantum: Long)
 
   object GetScheduledMessages
-  object HasPendingMessages
-  case class HasPendingMessagesOfTimestamp(t: Long)
   case class BroadcastMessageToIncoming(message: Any, timestamp: Long)
   case class SendMessage(receiver: ActorRef, message: Any, timestamp: Long)
   case class ScheduleMessage(message: Any, timestamp: Long, sender: ActorRef)
@@ -107,8 +105,6 @@ trait Node extends Messaging {
   def isReady: Future[Boolean] = Future.successful(true)
 
   def hasPendingMessages: Boolean
-
-  def hasPendingMessagesOfTimestamp(t: Long): Boolean
 
   def broadcastMessage(timestamp: Long, message: Any, roleToBroadcastTo: String = "default"): Unit
   def broadcastMessageToIncoming(message: Any, timestamp: Long): Unit
@@ -304,10 +300,6 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
 
   def hasPendingMessages: Boolean = this.getMessageQueue.nonEmpty
 
-  def hasPendingMessagesOfTimestamp(t: Long): Boolean = {
-    this.hasPendingMessages && this.getMessageQueue.head.getTimestamp == t
-  }
-
   def sendMessage(receiver: ActorRef, timestamp: Long, message: Any): Any = {
     this.log(s"| sent | $self | $receiver| $currentSimulationTime | $message |")
     this.synchronizerStrategy.sendMessage(this, receiver, timestamp, message)
@@ -406,8 +398,6 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
 
     case SetCausalityErrorStrategy(strategy) => this.setCausalityErrorStrategy(strategy)
     case GetScheduledMessages => sender ! this.getScheduledMessages
-    case HasPendingMessages => sender ! this.hasPendingMessages
-    case HasPendingMessagesOfTimestamp(timestamp) => this.hasPendingMessagesOfTimestamp(timestamp)
     case BroadcastMessageToIncoming(message, timestamp) => this.broadcastMessage(timestamp, message)
     case SendMessage(receiver, message, timestamp) => this.sendMessage(receiver, timestamp, message)
 

@@ -61,7 +61,7 @@ class NeighbourSynchronizerStrategyWithLookahead() extends SynchronizerStrategy 
     val allNeighboursAreFinishedWithQuantum =
       receiver.getIngoingConnections.forall(node => this.statusOf(node).hasFinishedQuantum(t))
 
-    if (allNeighboursAreFinishedWithQuantum && !receiver.hasPendingMessagesOfTimestamp(t)) {
+    if (allNeighboursAreFinishedWithQuantum && !this.hasPendingMessagesOfTimestamp(t)) {
       val nextQuantum = (List(receiver.getRealIncomingQuantum) ++ ingoingNeighboursFinished.values.map(_.nextQuantum))
           .reduce((maybeNextQuantum1, maybeNextQuantum2) => {
             //Find the minimum of two Option[Long]
@@ -73,6 +73,10 @@ class NeighbourSynchronizerStrategyWithLookahead() extends SynchronizerStrategy 
         receiver.scheduleSimulationAdvance(nextQuantum.get)
       }
     }
+  }
+
+  def hasPendingMessagesOfTimestamp(t: Long) = {
+    this.messageQueue.nonEmpty && this.messageQueue.head.getTimestamp == t
   }
 
   override def sendMessage(senderNode: NodeImpl, receiverActor: ActorRef, messageTimestamp: Long, message: Any): Unit = {

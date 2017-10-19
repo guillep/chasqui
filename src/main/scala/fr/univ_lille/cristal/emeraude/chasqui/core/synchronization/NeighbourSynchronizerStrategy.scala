@@ -34,10 +34,14 @@ class NeighbourSynchronizerStrategy extends SynchronizerStrategy {
 
   private def checkAdvanceSimulation(receiver: Node, t: Long): Unit = {
     val allNeighboursAreReady = receiver.getIngoingConnections.forall(node => neighboursFinished.contains(node))
-    if (allNeighboursAreReady && !receiver.hasPendingMessagesOfTimestamp(t)) {
+    if (allNeighboursAreReady && !this.hasPendingMessagesOfTimestamp(t)) {
       neighboursFinished.clear()
       receiver.scheduleSimulationAdvance(t + 1)
     }
+  }
+
+  def hasPendingMessagesOfTimestamp(t: Long) = {
+    this.messageQueue.nonEmpty && this.messageQueue.head.getTimestamp == t
   }
 
   override def sendMessage(senderNode: NodeImpl, receiverActor: ActorRef, messageTimestamp: Long, message: Any): Unit = {

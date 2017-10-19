@@ -131,14 +131,6 @@ class TypedNode(val actor: ActorRef) {
     Await.result(actor ? GetScheduledMessages, Timeout(21474835 seconds).duration).asInstanceOf[mutable.PriorityQueue[Message]]
   }
 
-  def hasPendingMessages(): Boolean = {
-    Await.result(actor ? HasPendingMessages, Timeout(21474835 seconds).duration).asInstanceOf[Boolean]
-  }
-
-  def hasPendingMessagesOfTimestamp(t: Long): Boolean = {
-    Await.result(actor ? HasPendingMessagesOfTimestamp(t), Timeout(21474835 seconds).duration).asInstanceOf[Boolean]
-  }
-
   def broadcastMessageToIncoming(message: Any, timestamp: Long): Unit = {
     actor ! BroadcastMessageToIncoming(message, timestamp)
   }
