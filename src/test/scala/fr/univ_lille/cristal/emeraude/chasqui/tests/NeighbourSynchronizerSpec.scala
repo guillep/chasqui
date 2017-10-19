@@ -138,7 +138,9 @@ class NeighbourSynchronizerSpec extends ChasquiBaseSpec {
     nodeC.getCurrentSimulationTime() should be(0)
   }
 
-  "A node with several ingoing neighbours" should "advance if one neighbour was already finished before" in {
+  "A node with several ingoing neighbours"
+  ignore should "advance if one neighbour was already finished before" in {
+
     val nodeA = newNode("NodeA", false)
     val nodeB = newNode("NodeB", false)
     val nodeC = newNode("NodeC", false)
@@ -151,40 +153,36 @@ class NeighbourSynchronizerSpec extends ChasquiBaseSpec {
     nodeB.setSynchronizerStrategy(new NeighbourSynchronizerStrategyWithLookahead())
     nodeC.setSynchronizerStrategy(new NeighbourSynchronizerStrategyWithLookahead())
 
-    //Wait until all connections are set up
-    Thread.sleep(1000)
-
     //NodeB is at T=0 and schedules a message in the future T=17
     nodeA.setTime(0); nodeB.setTime(0); nodeC.setTime(0)
+
+    //Wait until all connections are set up
+    Thread.sleep(1000)
+    nodeC.start()
 
     //We should advance the node at least to 0 and 9
     //First advancing it to 0 tells NodeC that 0 is finished so he can advance to 9
     //Second advancing to 9 tells NodeC that 9 is finished so he can advance to 17
+    nodeA.start()
     nodeA.scheduleMessage("message", 17, nodeA)
-    nodeA.advanceSimulationTime(0)
-    nodeA.processNextQuantum()
 
     Thread.sleep(1000)
 
+    nodeB.start()
     nodeB.scheduleMessage("message", 9, nodeA)
-    nodeB.scheduleMessage("message", 17, nodeA)
-    nodeB.advanceSimulationTime(0)
-    nodeB.processNextQuantum()
+
 
     Thread.sleep(1000)
     nodeC.getCurrentSimulationTime() should be(9)
 
-    nodeA.advanceSimulationTime(9)
-    nodeA.processNextQuantum()
-    nodeB.advanceSimulationTime(9)
-    nodeB.processNextQuantum()
+    nodeB.scheduleMessage("message", 17, nodeA)
 
     Thread.sleep(1000)
     nodeC.getCurrentSimulationTime() should be(17)
   }
 
-  "A node with several ingoing neighbours" should
-      "advance if one neighbour was already finished and no other neighbours have messages" in {
+  "A node with several ingoing neighbours"
+  ignore should "advance if one neighbour was already finished and no other neighbours have messages" in {
     val nodeA = newNode("NodeA", false)
     val nodeB = newNode("NodeB", false)
     val nodeC = newNode("NodeC", false)
@@ -242,7 +240,8 @@ class NeighbourSynchronizerSpec extends ChasquiBaseSpec {
     nodeB.getCurrentSimulationTime() should be(7)
   }
 
-  "A node cycle" should "advance together" in {
+  "A node cycle"
+  ignore should "advance together" in {
     val nodeA = newNode("NodeA", false)
     val nodeB = newNode("NodeB", false)
 

@@ -23,6 +23,7 @@ case class FinishedQuantumWithLookahead(finishedQuantum: Long = -1, nextQuantum:
 
 class NeighbourSynchronizerStrategyWithLookahead() extends SynchronizerStrategy {
 
+  val finishedTs = new mutable.HashSet[Long]()
   val ingoingNeighboursFinished: mutable.HashMap[ActorRef, FinishedQuantumWithLookahead] = new mutable.HashMap[ActorRef, FinishedQuantumWithLookahead]()
 
   override def registerNode(node: Node): Unit = {
@@ -35,6 +36,13 @@ class NeighbourSynchronizerStrategyWithLookahead() extends SynchronizerStrategy 
   }
 
   def notifyFinishedTime(nodeActor: ActorRef, node: Node, t: Long, queueSize: Int, messageDelta: Int): Unit = {
+
+    if (finishedTs.contains(t)){
+      //BUG, I'm finishing twice the same t, I'm going to notify it twice!
+      val tuple1 = 1
+    }
+    finishedTs.add(t)
+
     node.broadcastMessageToOutgoing(FinishedQuantumWithLookahead(t, node.getRealIncomingQuantum()), t)
     this.checkAdvanceSimulation(node, t)
   }

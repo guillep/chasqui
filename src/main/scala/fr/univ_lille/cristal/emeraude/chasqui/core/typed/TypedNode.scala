@@ -15,23 +15,44 @@ import scala.concurrent.{Await, Future}
   * Created by guille on 12/06/17.
   */
 class TypedNode(val actor: ActorRef) {
+
   import Node._
   implicit val timeout = Timeout(21474835 seconds)
+
+  /****************************************************************
+    *
+    * HELPERS
+    *
+    *****************************************************************/
+
+  private def blockingAsk[ExpectedReturnType](message: Any): ExpectedReturnType = {
+    Await.result(actor ? message, Timeout(21474835 seconds).duration).asInstanceOf[ExpectedReturnType]
+  }
+
+  /****************************************************************
+    *
+    * Main API
+    *
+    *****************************************************************/
+
+  def getId(): Any = {
+    this.blockingAsk[Any](GetId)
+  }
 
   def setId(id: String): Unit = {
     actor ! SetId(id)
   }
 
   def getIngoingConnections: Set[ActorRef] = {
-    Await.result(actor ? GetIngoingConnections, Timeout(21474835 seconds).duration).asInstanceOf[Set[ActorRef]]
+    this.blockingAsk(GetIngoingConnections)
   }
 
   def getIngoingConnections(role: String): Set[ActorRef] = {
-    Await.result(actor ? GetIngoingConnections(role), Timeout(21474835 seconds).duration).asInstanceOf[Set[ActorRef]]
+    this.blockingAsk(GetIngoingConnections(role))
   }
 
   def getOutgoingConnections: Set[ActorRef] = {
-    Await.result(actor ? GetOutgoingConnections, Timeout(21474835 seconds).duration).asInstanceOf[Set[ActorRef]]
+    this.blockingAsk(GetOutgoingConnections)
   }
 
   def getMessageTransferDeltaInCurrentQuantum(): Future[Int] = {
@@ -39,7 +60,7 @@ class TypedNode(val actor: ActorRef) {
   }
 
   def blockingConnectTo(node: TypedNode, role: String): Done = {
-    Await.result(actor ? ConnectTo(node.actor, role), Timeout(21474835 seconds).duration).asInstanceOf[Done]
+    this.blockingAsk(ConnectTo(node.actor, role))
   }
 
   def connectTo(node: TypedNode, role: String = "default"): Unit = {
@@ -59,7 +80,7 @@ class TypedNode(val actor: ActorRef) {
   }
 
   def getCurrentSimulationTime(): Long = {
-    Await.result(actor ? GetCurrentSimulationTime, Timeout(21474835 seconds).duration).asInstanceOf[Long]
+    this.blockingAsk(GetCurrentSimulationTime)
   }
 
   def setSynchronizerStrategy(synchronizerStrategy: SynchronizerStrategy): Unit = {
@@ -90,9 +111,9 @@ class TypedNode(val actor: ActorRef) {
     (actor ? GetIncomingQuantum).asInstanceOf[Future[Option[Long]]]
   }
 
-  def advanceSimulationTime(): Unit = {
+/*  def advanceSimulationTime(): Unit = {
     actor ! AdvanceSimulationTime
-  }
+  }*/
 
   def advanceSimulationTime(nextQuantum: Long): Unit = {
     actor ! AdvanceSimulationTime(nextQuantum)
@@ -143,4 +164,14 @@ class TypedNode(val actor: ActorRef) {
   }
 
   override def hashCode(): Int = actor.hashCode()
+
+  /****************************************************************
+    *
+    * Queries API
+    *
+    *****************************************************************/
+
+  def getNodeSummary(): (String, String, Long, Seq[Message], Int) = {
+    this.blockingAsk(GetNodeSummary)
+  }
 }

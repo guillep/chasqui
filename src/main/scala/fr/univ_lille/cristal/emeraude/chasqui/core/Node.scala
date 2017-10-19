@@ -20,6 +20,8 @@ trait Messaging {
 }
 
 object Node {
+
+  object GetId
   case class SetId(id: String)
 
   object GetIngoingConnections
@@ -46,7 +48,7 @@ object Node {
 
   object NotifyFinishedQuantum
   object GetIncomingQuantum
-  object AdvanceSimulationTime
+  //object AdvanceSimulationTime
   case class AdvanceSimulationTime(quantum: Long)
 
   object GetScheduledMessages
@@ -60,6 +62,14 @@ object Node {
   object PendingMessagesInQuantum
   object NextQuantum
   object CurrentQuantum
+
+  /****************************************************************
+    *
+    * Queries API
+    *
+    *****************************************************************/
+
+  object GetNodeSummary
 }
 
 trait Node extends Messaging {
@@ -118,18 +128,26 @@ object NullNode extends Messaging {
 
 abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrategy = new ErrorCausalityErrorStrategy) extends Actor with Node {
 
+  def log(s: String) = {
+    //TODO: implement logging system
+    //println(s)
+  }
+
   protected var id = UUID.randomUUID().toString
   def getId = id
   def setId(id: String) = this.id = id
 
-  override def toString = super.toString + s"(${this.id})"
+  protected var status = "Not started"
+  def setStatus(s: String) = this.status = s
+
+  override def toString = super.toString + s"(${id}, ${status})"
 
   def getActorRef() = self
 
   // For debugging and testing purposes
   // Sometimes we want to force a node to not process messages as soon as it arrives to a new quantum
   // Otherwise, it can loop and consume all its message queue
-  private var automaticallyProcessQuantum: Boolean = true
+  protected var automaticallyProcessQuantum: Boolean = true
 
   def doNotAutomaticallyProcessQuantum(): Node = {
     this.automaticallyProcessQuantum = false
@@ -210,16 +228,17 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
   }
 
   def advanceSimulationTime(nextQuantum: Long): Unit = {
+    if (nextQuantum < this.currentSimulationTime) {
+      throw new UnsupportedOperationException(s"Cannot advance to previous quantum $nextQuantum. Current quantum is $currentSimulationTime")
+    }
     this.currentSimulationTime = nextQuantum
     this.sentMessagesInQuantum = 0
     this.receivedMessagesInQuantum = 0
-    if (this.automaticallyProcessQuantum){
-      this.processNextQuantum()
-    }
   }
 
   def scheduleSimulationAdvance(nextQuantum: Long): Unit = {
     self ! AdvanceSimulationTime(nextQuantum)
+    self ! ProcessNextQuantum
   }
 
   def getIncomingQuantum(): Future[Option[Long]] = {
@@ -242,16 +261,20 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
     * TODO: In a very big recursion this could create a stack overflow
     */
   def processNextQuantum() = {
-    while (this.messageQueue.nonEmpty && this.messageQueue.head.getTimestamp == this.currentSimulationTime) {
+    while (this.hasMessagesForThisQuantum) {
       this.uncheckedProcessNextMessage()
     }
     this.notifyFinishedQuantum()
   }
 
-  def uncheckedProcessNextMessage(): Message = {
+  def hasMessagesForThisQuantum = {
+    this.messageQueue.nonEmpty && this.messageQueue.head.getTimestamp == this.currentSimulationTime
+  }
+
+  def uncheckedProcessNextMessage(): Unit = {
+    this.setStatus(s"Processing messages in t=$currentSimulationTime")
     val message = this.messageQueue.dequeue()
     this.internalReceiveMessage(message.getMessage, message.getSender)
-    message
   }
 
   def processNextMessage() = {
@@ -269,6 +292,7 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
   }
 
   def notifyFinishedQuantum(): Unit = {
+    this.setStatus(s"Waiting for quantum to finish t=$currentSimulationTime")
     this.synchronizerStrategy.notifyFinishedTime(self, this, this.currentSimulationTime, this.getScheduledMessages.size, this.getMessageDeltaInQuantum)
   }
 
@@ -289,6 +313,7 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
   }
 
   def sendMessage(receiver: ActorRef, timestamp: Long, message: Any): Any = {
+    this.log(s"| sent | $self | $receiver| $currentSimulationTime | $message |")
     this.sentMessagesInQuantum += 1
     receiver ! ScheduleMessage(message, timestamp, self)
   }
@@ -312,12 +337,15 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
   }
 
   def scheduleMessage(message: Any, timestamp: Long, senderActorRef: ActorRef): Unit = {
+    this.log(s"| received | $senderActorRef | $self | $currentSimulationTime | $message |")
     this.receivedMessagesInQuantum += 1
 
     if (timestamp < this.currentSimulationTime) {
       //The message is in the past.
       //This is a Causality error
-      causalityErrorStrategy.handleCausalityError(timestamp, this.currentSimulationTime, this, senderActorRef, message)
+      if (!message.isInstanceOf[SynchronizationMessage]){
+        causalityErrorStrategy.handleCausalityError(timestamp, this.currentSimulationTime, this, senderActorRef, message)
+      }
       return
     }
 
@@ -326,6 +354,7 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
     } else {
       this.queueMessage(message, timestamp, senderActorRef)
     }
+    this.notifyFinishedQuantum()
   }
 
   /**
@@ -333,6 +362,9 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
     * Process the current node quantum and wait for synchronization instructions
     */
   def start(): Unit = {
+    assert(this.currentSimulationTime == 0)
+    assert(this.receivedMessagesInQuantum == 0)
+    assert(this.sentMessagesInQuantum == 0)
     this.scheduleSimulationAdvance(this.getCurrentSimulationTime())
   }
 
@@ -359,6 +391,7 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
   def receiveMessage(message: Any, sender: ActorRef)
 
   override def receive: Receive = {
+    case GetId => sender ! this.getId
     case SetId(id) => this.setId(id)
     case GetIngoingConnections => sender ! this.getIngoingConnections
     case GetIngoingConnections(role) => sender ! this.getIngoingConnections(role)
@@ -386,8 +419,11 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
 
 
     case GetIncomingQuantum => sender ! this.getRealIncomingQuantum()
-    case AdvanceSimulationTime => this.advanceSimulationTime(this.getRealIncomingQuantum().get)
-    case AdvanceSimulationTime(nextQuantum) => this.advanceSimulationTime(nextQuantum)
+    //case AdvanceSimulationTime => this.advanceSimulationTime(this.getRealIncomingQuantum().get)
+    case AdvanceSimulationTime(nextQuantum) => {
+      this.advanceSimulationTime(nextQuantum)
+      sender ! nextQuantum
+    }
 
     case SetCausalityErrorStrategy(strategy) => this.setCausalityErrorStrategy(strategy)
     case GetScheduledMessages => sender ! this.getScheduledMessages
@@ -395,6 +431,9 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
     case HasPendingMessagesOfTimestamp(timestamp) => this.hasPendingMessagesOfTimestamp(timestamp)
     case BroadcastMessageToIncoming(message, timestamp) => this.broadcastMessage(timestamp, message)
     case SendMessage(receiver, message, timestamp) => this.sendMessage(receiver, timestamp, message)
+
     case ScheduleMessage(message, timestamp, sender) => this.scheduleMessage(message, timestamp, sender)
+
+    case GetNodeSummary => sender ! (id, status, currentSimulationTime, messageQueue.toSeq, this.getMessageDeltaInQuantum)
   }
 }

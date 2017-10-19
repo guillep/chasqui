@@ -37,7 +37,8 @@ class MessageSpec extends ChasquiBaseSpec {
     nodeA.sendMessage(nodeB.actor, 2, "message")
 
     Thread.sleep(500)
-    nodeB.advanceSimulationTime()
+    nodeB.advanceSimulationTime(2)
+    nodeB.processNextQuantum()
     nodeB.getReceivedMessages should contain ("message")
   }
 
@@ -59,7 +60,11 @@ class MessageSpec extends ChasquiBaseSpec {
     nodeA.sendMessage(nodeB.actor, 3, "message")
 
     Thread.sleep(500)
-    nodeB.advanceSimulationTime()
+    nodeB.advanceSimulationTime(2)
+    nodeB.processNextQuantum()
+    nodeB.getReceivedMessages should not contain ("message")
+    nodeB.advanceSimulationTime(3)
+    nodeB.processNextQuantum()
     nodeB.getReceivedMessages should contain ("message")
   }
 

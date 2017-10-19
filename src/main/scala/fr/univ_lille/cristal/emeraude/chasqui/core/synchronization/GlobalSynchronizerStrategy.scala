@@ -5,10 +5,11 @@ import java.util.concurrent.TimeUnit
 import akka.actor.{ActorRef, ActorSystem, ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider, TypedActor, TypedProps}
 import akka.pattern.ask
 import akka.util.Timeout
-import fr.univ_lille.cristal.emeraude.chasqui.core.Node.{AdvanceSimulationTime, GetMessageTransferDeltaInCurrentQuantum}
+import fr.univ_lille.cristal.emeraude.chasqui.core.Node.{AdvanceSimulationTime, GetIncomingQuantum, GetMessageTransferDeltaInCurrentQuantum, ProcessNextQuantum}
 import fr.univ_lille.cristal.emeraude.chasqui.core._
 
 import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.util._
 
 /**
   * Created by guille on 19/04/17.
@@ -45,6 +46,7 @@ trait MessageSynchronizer {
 }
 
 class MessageSynchronizerImpl extends MessageSynchronizer {
+
   import scala.concurrent.duration._
   implicit val ec = ExecutionContext.Implicits.global
   implicit lazy val timeout = Timeout(5 seconds)
@@ -56,10 +58,24 @@ class MessageSynchronizerImpl extends MessageSynchronizer {
     nodes.forall(this.nodesFinishedThisQuantum.contains)
   }
 
-  def allMessagesInThisQuantumProcessed(): Boolean = {
+  def getNextQuantum(): Option[Long] = {
+
+    val sequence = nodes.toList.map(node => (node ? GetIncomingQuantum).asInstanceOf[Future[Option[Long]]])
+    val total = Future.foldLeft[Option[Long], Option[Long]](sequence)(None)((accum, each)=>
+      if (accum.isEmpty) {
+        each
+      } else if (each.isEmpty) {
+        accum
+      } else {
+        Some(accum.get.min(each.get))
+      })
+    Await.result(total, Timeout(5, TimeUnit.MINUTES).duration)
+  }
+
+  def allMessagesInThisQuantumProcessed(): Int = {
     val sequence = nodes.toList.map(node => (node ? GetMessageTransferDeltaInCurrentQuantum).asInstanceOf[Future[Int]])
     val total = Future.foldLeft[Int, Int](sequence)(0)((accum, each)=> accum + each)
-    Await.result(total, Timeout(5, TimeUnit.MINUTES).duration) == 0
+    Await.result(total, Timeout(5, TimeUnit.MINUTES).duration)
   }
 
   def notifyFinishedTime(nodeActorRef: ActorRef, t: Long, queueSize: Int, messageDelta: Int): Unit = {
@@ -69,10 +85,27 @@ class MessageSynchronizerImpl extends MessageSynchronizer {
 
     val allNodesReady = this.allNodesAreReady()
     val allMessagesInThisQuantumProcessed = this.allMessagesInThisQuantumProcessed()
-    if (allNodesReady && allMessagesInThisQuantumProcessed && (this.messagesToBeProcessedFollowingQuantums != 0)) {
+    val existPendingMessages = this.messagesToBeProcessedFollowingQuantums != 0
+    if (allNodesReady && allMessagesInThisQuantumProcessed == 0 && existPendingMessages) {
       this.nodesFinishedThisQuantum.clear()
       this.messagesToBeProcessedFollowingQuantums = 0
-      this.nodes.foreach(node => node ! AdvanceSimulationTime(t + 1))
+
+      val maybeNextQuantum = this.getNextQuantum()
+      if (maybeNextQuantum.isDefined) {
+        val sequence = this.nodes.map(node => (node ? AdvanceSimulationTime(maybeNextQuantum.get)).asInstanceOf[Future[Int]])
+        Future.sequence(sequence)
+          .onComplete {
+            case Success(result) => {
+              //TODO: println(s"Quantum achieved: ${maybeNextQuantum.get} with: $result")
+              this.nodes.foreach(n => n ! ProcessNextQuantum)
+            }
+            case Failure(_) => {
+              println("Error while resuming next quantum!")
+            }
+          }
+      }
+    } else {
+      //println(s"Not ready to advance yet at t=$t. Nodes ready: $allNodesReady, all messages in quantum processed: $allMessagesInThisQuantumProcessed, existing pending messages: $existPendingMessages")
     }
   }
 }
