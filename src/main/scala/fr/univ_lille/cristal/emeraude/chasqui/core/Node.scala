@@ -245,15 +245,17 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
   }
 
   def getRealIncomingQuantum: Option[Long] = {
-    if (this.messageQueue.isEmpty) { None }
+    if (this.getMessageQueue.isEmpty) { None }
     else {
-      Some(this.messageQueue.head.getTimestamp)
+      Some(this.getMessageQueue.head.getTimestamp)
     }
   }
 
   /****************************************************************************
   *  Checking messages
   ****************************************************************************/
+
+  def getMessageQueue = this.messageQueue
 
   /**
     * Get all elements in the same priority and remove them from the message queue
@@ -267,17 +269,17 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
   }
 
   def hasMessagesForThisQuantum: Boolean = {
-    this.messageQueue.nonEmpty && this.messageQueue.head.getTimestamp == this.currentSimulationTime
+    this.getMessageQueue.nonEmpty && this.getMessageQueue.head.getTimestamp == this.currentSimulationTime
   }
 
   def uncheckedProcessNextMessage(): Unit = {
     this.setStatus(s"Processing messages in t=$currentSimulationTime")
-    val message = this.messageQueue.dequeue()
+    val message = this.getMessageQueue.dequeue()
     this.internalReceiveMessage(message.getMessage, message.getSender)
   }
 
   def processNextMessage(): Unit = {
-    if (this.messageQueue.isEmpty) {
+    if (this.getMessageQueue.isEmpty) {
       throw new UnsupportedOperationException("No more messages to process")
     }
     this.uncheckedProcessNextMessage()
@@ -285,7 +287,7 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
   }
 
   private def verifyFinishedQuantum() = {
-    if (this.currentSimulationTime < this.messageQueue.head.getTimestamp) {
+    if (this.currentSimulationTime < this.getMessageQueue.head.getTimestamp) {
       this.notifyFinishedQuantum()
     }
   }
@@ -303,12 +305,12 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
     messageQueue += new Message(message, timestamp, sender)
   }
 
-  def getScheduledMessages: mutable.PriorityQueue[Message] = this.messageQueue
+  def getScheduledMessages: mutable.PriorityQueue[Message] = this.getMessageQueue
 
-  def hasPendingMessages: Boolean = this.messageQueue.nonEmpty
+  def hasPendingMessages: Boolean = this.getMessageQueue.nonEmpty
 
   def hasPendingMessagesOfTimestamp(t: Long): Boolean = {
-    this.hasPendingMessages && this.messageQueue.head.getTimestamp == t
+    this.hasPendingMessages && this.getMessageQueue.head.getTimestamp == t
   }
 
   def sendMessage(receiver: ActorRef, timestamp: Long, message: Any): Any = {
@@ -416,6 +418,6 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
 
     case ScheduleMessage(message, timestamp, sender) => this.scheduleMessage(message, timestamp, sender)
 
-    case GetNodeSummary => sender ! (id, status, currentSimulationTime, messageQueue.toSeq, this.getMessageDeltaInQuantum)
+    case GetNodeSummary => sender ! (id, status, currentSimulationTime, getMessageQueue.toSeq, this.getMessageDeltaInQuantum)
   }
 }

@@ -54,9 +54,13 @@ class GlobalSynchronizerStrategy(system: ActorSystem) extends SynchronizerStrate
     if (receiverNode.getCurrentSimulationTime == messageTimestamp){
       receiverNode.handleIncomingMessage(message, senderActor)
     } else {
-      receiverNode.queueMessage(message, messageTimestamp, senderActor)
+      queueMessage(receiverNode, senderActor, messageTimestamp, message)
     }
     receiverNode.notifyFinishedQuantum()
+  }
+
+  private def queueMessage(receiverNode: NodeImpl, senderActor: ActorRef, messageTimestamp: Long, message: Any) = {
+    receiverNode.queueMessage(message, messageTimestamp, senderActor)
   }
 }
 
