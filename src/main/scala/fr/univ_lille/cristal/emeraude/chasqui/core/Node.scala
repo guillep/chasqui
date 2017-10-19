@@ -100,8 +100,6 @@ trait Node extends Messaging {
 
   def setCausalityErrorStrategy(causalityErrorStrategy: CausalityErrorStrategy): Unit
 
-  def getScheduledMessages: mutable.PriorityQueue[Message]
-
   def isReady: Future[Boolean] = Future.successful(true)
 
   def broadcastMessage(timestamp: Long, message: Any, roleToBroadcastTo: String = "default"): Unit
@@ -393,7 +391,7 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
       sender ! nextQuantum
 
     case SetCausalityErrorStrategy(strategy) => this.setCausalityErrorStrategy(strategy)
-    case GetScheduledMessages => sender ! this.getScheduledMessages
+    case GetScheduledMessages => sender ! this.getMessageQueue
     case BroadcastMessageToIncoming(message, timestamp) => this.broadcastMessage(timestamp, message)
     case SendMessage(receiver, message, timestamp) => this.sendMessage(receiver, timestamp, message)
 
