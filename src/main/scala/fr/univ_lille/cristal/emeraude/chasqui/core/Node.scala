@@ -104,8 +104,6 @@ trait Node extends Messaging {
 
   def isReady: Future[Boolean] = Future.successful(true)
 
-  def hasPendingMessages: Boolean
-
   def broadcastMessage(timestamp: Long, message: Any, roleToBroadcastTo: String = "default"): Unit
   def broadcastMessageToIncoming(message: Any, timestamp: Long): Unit
   def broadcastMessageToOutgoing(message: Any, timestamp: Long): Unit
@@ -289,7 +287,7 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
 
   def notifyFinishedQuantum(): Unit = {
     this.setStatus(s"Waiting for quantum to finish t=$currentSimulationTime")
-    this.synchronizerStrategy.notifyFinishedTime(self, this, this.currentSimulationTime, this.getScheduledMessages.size, this.getMessageDeltaInQuantum)
+    this.synchronizerStrategy.notifyFinishedTime(self, this, this.currentSimulationTime, this.getMessageDeltaInQuantum)
   }
 
   private def getMessageDeltaInQuantum: Int = {

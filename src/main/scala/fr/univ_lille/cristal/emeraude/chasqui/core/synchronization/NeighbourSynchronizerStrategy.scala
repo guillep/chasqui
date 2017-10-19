@@ -22,7 +22,7 @@ class NeighbourSynchronizerStrategy extends SynchronizerStrategy {
     //We do not track any node
   }
 
-  def notifyFinishedTime(nodeActor: ActorRef, node: Node, t: Long, queueSize: Int, messageDelta: Int): Unit = {
+  def notifyFinishedTime(nodeActor: ActorRef, node: Node, t: Long, messageDelta: Int): Unit = {
     node.broadcastMessageToIncoming(FinishedQuantum(t), t)
     this.checkAdvanceSimulation(node, t)
   }

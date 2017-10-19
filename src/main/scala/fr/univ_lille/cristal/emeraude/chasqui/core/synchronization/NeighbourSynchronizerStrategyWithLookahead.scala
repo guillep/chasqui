@@ -37,7 +37,7 @@ class NeighbourSynchronizerStrategyWithLookahead() extends SynchronizerStrategy 
     ingoingNeighboursFinished.getOrElse(node, new FinishedQuantumWithLookahead())
   }
 
-  def notifyFinishedTime(nodeActor: ActorRef, node: Node, t: Long, queueSize: Int, messageDelta: Int): Unit = {
+  def notifyFinishedTime(nodeActor: ActorRef, node: Node, t: Long, messageDelta: Int): Unit = {
 
     if (finishedTs.contains(t)){
       //BUG, I'm finishing twice the same t, I'm going to notify it twice!

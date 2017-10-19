@@ -24,8 +24,8 @@ class GlobalSynchronizerStrategy(system: ActorSystem) extends SynchronizerStrate
     this.getSynchronizerActor().registerNode(node.getActorRef)
   }
 
-  def notifyFinishedTime(nodeActorRef: ActorRef, node: Node, t: Long, queueSize: Int, messageDelta: Int): Unit = {
-    this.getSynchronizerActor().notifyFinishedTime(nodeActorRef, t, queueSize, messageDelta)
+  def notifyFinishedTime(nodeActorRef: ActorRef, node: Node, t: Long, messageDelta: Int): Unit = {
+    this.getSynchronizerActor().notifyFinishedTime(nodeActorRef, t, this.messageQueue.size, messageDelta)
   }
 
   def getSynchronizerActor() = {

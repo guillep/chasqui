@@ -27,7 +27,6 @@ class SynchronizerSpec extends ChasquiBaseSpec {
       org.mockito.ArgumentMatchers.eq(nodeA.actor), //Sender actor
       ArgumentMatchers.any(),                       //Node object
       org.mockito.ArgumentMatchers.eq(0L),          //Simulation T
-      org.mockito.ArgumentMatchers.eq(0),           //Number of scheduled messages
       org.mockito.ArgumentMatchers.eq(0))           //Message delta (sent - received)
 
   }
