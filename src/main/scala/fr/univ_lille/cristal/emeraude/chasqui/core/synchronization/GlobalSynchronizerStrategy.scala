@@ -79,7 +79,7 @@ trait MessageSynchronizer {
 
 }
 
-class MessageSynchronizerImpl extends MessageSynchronizer {
+class GlobalSynchronizerSingletonActor extends MessageSynchronizer {
 
   import scala.concurrent.duration._
   implicit val ec = ExecutionContext.Implicits.global
@@ -149,15 +149,15 @@ class GlobalSynchronizerSingleton[T <: AnyRef, TImpl <: T](system: ActorSystem, 
   val instance: T = TypedActor(system).typedActorOf[T, TImpl](props, name)
 }
 
-trait SystemScoped extends ExtensionId[GlobalSynchronizerSingleton[MessageSynchronizer, MessageSynchronizerImpl]] with ExtensionIdProvider {
+trait SystemScoped extends ExtensionId[GlobalSynchronizerSingleton[MessageSynchronizer, GlobalSynchronizerSingletonActor]] with ExtensionIdProvider {
   final override def lookup = this
   final override def createExtension(system: ExtendedActorSystem) = new GlobalSynchronizerSingleton(system, instanceProps, instanceName)
 
-  protected def instanceProps: TypedProps[MessageSynchronizerImpl]
+  protected def instanceProps: TypedProps[GlobalSynchronizerSingletonActor]
   protected def instanceName: String
 }
 
 object SingletonService extends SystemScoped {
-  override lazy val instanceProps = TypedProps[MessageSynchronizerImpl]()
+  override lazy val instanceProps = TypedProps[GlobalSynchronizerSingletonActor]()
   override lazy val instanceName = "global-synchronizer-actor"
 }
