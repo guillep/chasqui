@@ -11,7 +11,7 @@ import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
   */
 class ChasquiBaseSpec extends FlatSpec with Matchers with MockitoSugar with BeforeAndAfterEach {
 
-  var system: ActorSystem = _
+  implicit var system: ActorSystem = _
 
   def newNodeInTime(t : Int): TypedTestNode = {
     val node = this.newNode

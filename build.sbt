@@ -3,6 +3,8 @@ name := "chasqui"
 version := "0.1-SNAPSHOT"
 scalaVersion := "2.12.1"
 
+fork in run := true
+javaOptions += "-Xprof"
 
 /*********************************************************************************************************************
   * Dependencies

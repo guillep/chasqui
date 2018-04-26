@@ -6,5 +6,5 @@ import akka.actor.ActorRef
   * Created by guille on 10/04/17.
   */
 trait CausalityErrorStrategy {
-  def handleCausalityError(causalityErrorTimestamp: Long, currentSimulationTime: Long, receiver: NodeImpl, sender: ActorRef, message: Any)
+  def handleCausalityError(causalityErrorTimestamp: Long, currentSimulationTime: Long, receiver: Node, sender: ActorRef, message: Any)
 }

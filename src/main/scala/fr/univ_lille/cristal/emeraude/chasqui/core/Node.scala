@@ -98,7 +98,10 @@ trait Node extends Messaging {
   def advanceSimulationTime(nextQuantum: Long): Unit
   def scheduleSimulationAdvance(nextQuantum: Long): Unit
 
+  def getCausalityErrorStrategy: CausalityErrorStrategy
   def setCausalityErrorStrategy(causalityErrorStrategy: CausalityErrorStrategy): Unit
+
+  def handleIncomingMessage(message: Any, sender: ActorRef): Unit
 
   def isReady: Future[Boolean] = Future.successful(true)
 
@@ -291,7 +294,7 @@ abstract class NodeImpl(private var causalityErrorStrategy : CausalityErrorStrat
   private def getMessageDeltaInQuantum: Int = {
     this.sentMessagesInQuantum - this.receivedMessagesInQuantum
   }
-  
+
   def sendMessage(receiver: ActorRef, timestamp: Long, message: Any): Any = {
     this.log(s"| sent | $self | $receiver| $currentSimulationTime | $message |")
     this.synchronizerStrategy.sendMessage(this, receiver, timestamp, message)

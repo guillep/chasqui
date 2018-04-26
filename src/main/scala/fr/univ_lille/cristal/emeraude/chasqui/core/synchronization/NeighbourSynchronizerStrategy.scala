@@ -44,11 +44,11 @@ class NeighbourSynchronizerStrategy extends SynchronizerStrategy {
     this.messageQueue.nonEmpty && this.messageQueue.head.getTimestamp == t
   }
 
-  override def sendMessage(senderNode: NodeImpl, receiverActor: ActorRef, messageTimestamp: Long, message: Any): Unit = {
+  override def sendMessage(senderNode: Node, receiverActor: ActorRef, messageTimestamp: Long, message: Any): Unit = {
     receiverActor ! ScheduleMessage(message, messageTimestamp, senderNode.getActorRef)
   }
 
-  override def scheduleMessage(receiverNode: NodeImpl, senderActor: ActorRef, messageTimestamp: Long, message: Any): Unit = {
+  override def scheduleMessage(receiverNode: Node, senderActor: ActorRef, messageTimestamp: Long, message: Any): Unit = {
     if (messageTimestamp < receiverNode.getCurrentSimulationTime) {
       //The message is in the past.
       //This is a Causality error

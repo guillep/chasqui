@@ -1,14 +1,15 @@
 package fr.univ_lille.cristal.emeraude.chasqui.core.synchronization
 
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, ActorSystem}
 import fr.univ_lille.cristal.emeraude.chasqui.core.Node.ScheduleMessage
 import fr.univ_lille.cristal.emeraude.chasqui.core._
 
 import scala.collection.mutable
 
-/**
-  * Created by guille on 19/04/17.
-  */
+object ManualSynchronizerStrategy extends SynchronizerStrategyCompanion{
+  override def buildFor(system: ActorSystem): SynchronizerStrategy = new ManualSynchronizerStrategy()
+}
+
 class ManualSynchronizerStrategy extends SynchronizerStrategy {
   override def registerNode(node: Node): Unit = {
     //Do nothing
@@ -24,11 +25,11 @@ class ManualSynchronizerStrategy extends SynchronizerStrategy {
     //Nothing
   }
 
-  override def sendMessage(senderNode: NodeImpl, receiverActor: ActorRef, messageTimestamp: Long, message: Any): Unit = {
+  override def sendMessage(senderNode: Node, receiverActor: ActorRef, messageTimestamp: Long, message: Any): Unit = {
     receiverActor ! ScheduleMessage(message, messageTimestamp, senderNode.getActorRef)
   }
 
-  override def scheduleMessage(receiverNode: NodeImpl, senderActor: ActorRef, messageTimestamp: Long, message: Any): Unit = {
+  override def scheduleMessage(receiverNode: Node, senderActor: ActorRef, messageTimestamp: Long, message: Any): Unit = {
     if (messageTimestamp < receiverNode.getCurrentSimulationTime) {
       //The message is in the past.
       //This is a Causality error

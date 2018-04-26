@@ -1,21 +1,20 @@
 package fr.univ_lille.cristal.emeraude.chasqui.core.typed
 
 import akka.Done
-import akka.actor.ActorRef
-import akka.util.Timeout
+import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
-
-import scala.concurrent.duration._
+import akka.util.Timeout
+import fr.univ_lille.cristal.emeraude.chasqui.core.synchronization.SynchronizerStrategyCompanion
 import fr.univ_lille.cristal.emeraude.chasqui.core.{CausalityErrorStrategy, Message, Node, SynchronizerStrategy}
 
 import scala.collection.{Set, mutable}
+import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 /**
   * Created by guille on 12/06/17.
   */
 class TypedNode(val actor: ActorRef) {
-
   import Node._
   implicit val timeout = Timeout(21474835 seconds)
 
@@ -81,6 +80,10 @@ class TypedNode(val actor: ActorRef) {
 
   def getCurrentSimulationTime(): Long = {
     this.blockingAsk(GetCurrentSimulationTime)
+  }
+
+  def setSynchronizerStrategy(synchronizationStrategy: SynchronizerStrategyCompanion, system: ActorSystem): Unit = {
+    this.setSynchronizerStrategy(synchronizationStrategy.buildFor(system))
   }
 
   def setSynchronizerStrategy(synchronizerStrategy: SynchronizerStrategy): Unit = {

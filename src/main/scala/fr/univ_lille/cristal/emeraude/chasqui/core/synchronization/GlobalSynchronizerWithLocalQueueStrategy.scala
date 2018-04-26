@@ -1,19 +1,27 @@
 package fr.univ_lille.cristal.emeraude.chasqui.core.synchronization
 
-import java.util.concurrent.TimeUnit
-
-import akka.actor.{ActorRef, ActorSystem, ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider, TypedActor, TypedProps}
+import akka.actor.{Actor, ActorRef, ActorSystem, ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 import fr.univ_lille.cristal.emeraude.chasqui.core.Node._
 import fr.univ_lille.cristal.emeraude.chasqui.core._
+import fr.univ_lille.cristal.emeraude.chasqui.core.synchronization.GlobalSynchronizerWithLocalQueueStrategy.{NotifyFinishedTime, RegisterNode}
 
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.collection.mutable
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util._
 
-/**
-  * Created by guille on 19/04/17.
-  */
+abstract class SynchronizerStrategyCompanion {
+  def buildFor(system: ActorSystem): SynchronizerStrategy
+}
+
+object GlobalSynchronizerWithLocalQueueStrategy extends SynchronizerStrategyCompanion {
+  override def buildFor(system: ActorSystem): SynchronizerStrategy = new GlobalSynchronizerWithLocalQueueStrategy(system)
+
+  case class RegisterNode(node: ActorRef)
+  case class NotifyFinishedTime(node: ActorRef, finishedQuantum: Long, messageQueueSize: Int, messageDelta: Int, incomingQuantum: Option[Long])
+}
+
 class GlobalSynchronizerWithLocalQueueStrategy(system: ActorSystem) extends SynchronizerStrategy {
   private var sentMessagesInQuantum = 0
   private var receivedMessagesInQuantum = 0
@@ -21,14 +29,14 @@ class GlobalSynchronizerWithLocalQueueStrategy(system: ActorSystem) extends Sync
   private val messageQueue = scala.collection.mutable.PriorityQueue[Message]()(Ordering.fromLessThan((s1, s2) => s1.getTimestamp > s2.getTimestamp))
 
   def registerNode(node: Node): Unit = {
-    this.getSynchronizerActor().registerNode(node.getActorRef)
+    this.getSynchronizerActor() ! RegisterNode(node.getActorRef)
   }
 
   def notifyFinishedTime(nodeActorRef: ActorRef, node: Node, t: Long, messageDelta: Int): Unit = {
-    this.getSynchronizerActor().notifyFinishedTime(nodeActorRef, t, this.messageQueue.size, messageDelta)
+    this.getSynchronizerActor() ! NotifyFinishedTime(nodeActorRef, t, this.messageQueue.size, messageDelta, node.getRealIncomingQuantum)
   }
 
-  def getSynchronizerActor() = {
+  def getSynchronizerActor(): ActorRef = {
     GlobalSynchronizerWithLocalQueueStrategyAccessor(system).instance
   }
 
@@ -36,17 +44,17 @@ class GlobalSynchronizerWithLocalQueueStrategy(system: ActorSystem) extends Sync
     //Nothing
   }
 
-  override def sendMessage(senderNode: NodeImpl, receiverActor: ActorRef, messageTimestamp: Long, message: Any): Unit = {
+  override def sendMessage(senderNode: Node, receiverActor: ActorRef, messageTimestamp: Long, message: Any): Unit = {
     this.sentMessagesInQuantum += 1
     receiverActor ! ScheduleMessage(message, messageTimestamp, senderNode.getActorRef)
   }
 
-  override def scheduleMessage(receiverNode: NodeImpl, senderActor: ActorRef, messageTimestamp: Long, message: Any): Unit = {
+  override def scheduleMessage(receiverNode: Node, senderActor: ActorRef, messageTimestamp: Long, message: Any): Unit = {
     this.receivedMessagesInQuantum += 1
 
     if (messageTimestamp < receiverNode.getCurrentSimulationTime) {
       //The message is in the past.
-      //This is a Causality error
+      //This is a Causality error unless it is a SynchronizationMessages
       if (!message.isInstanceOf[SynchronizationMessage]){
         receiverNode.getCausalityErrorStrategy.handleCausalityError(messageTimestamp, receiverNode.getCurrentSimulationTime, receiverNode, senderActor, message)
       }
@@ -68,23 +76,31 @@ class GlobalSynchronizerWithLocalQueueStrategy(system: ActorSystem) extends Sync
   override def getMessageQueue: scala.collection.mutable.PriorityQueue[Message] = this.messageQueue
 }
 
-trait MessageSynchronizer {
+abstract class AbstractGlobalSynchronizerWithLocalQueueSingletonActor extends Actor {
   val nodes = new collection.mutable.HashSet[ActorRef]()
 
   def registerNode(node: ActorRef): Unit = {
     nodes += node
   }
 
-  def notifyFinishedTime(nodeActorRef: ActorRef, t: Long, queueSize: Int, messageDelta: Int): Unit
+  def notifyFinishedTime(nodeActorRef: ActorRef, t: Long, queueSize: Int, messageDelta: Int, incomingQuantum: Option[Long]): Unit
 
+  override def receive: Receive = {
+    case RegisterNode(node) => this.registerNode(node)
+    case NotifyFinishedTime(node: ActorRef, finishedQuantum: Long, messageQueueSize: Int, messageDelta: Int, incomingQuantum: Option[Long]) =>
+        this.notifyFinishedTime(node, finishedQuantum, messageQueueSize, messageDelta, incomingQuantum)
+  }
 }
 
-class GlobalSynchronizerSingletonActor extends MessageSynchronizer {
+class GlobalSynchronizerWithLocalQueueSingletonActor extends AbstractGlobalSynchronizerWithLocalQueueSingletonActor {
+
 
   import scala.concurrent.duration._
   implicit val ec = ExecutionContext.Implicits.global
   implicit lazy val timeout = Timeout(5 seconds)
 
+  val nodeMessageDeltas = new mutable.HashMap[ActorRef, Int]()
+  val nodeIncomingQuantums = new mutable.HashMap[ActorRef, Option[Long]]()
   val nodesFinishedThisQuantum = new collection.mutable.HashSet[ActorRef]()
   var messagesToBeProcessedFollowingQuantums: Int = 0
 
@@ -93,37 +109,38 @@ class GlobalSynchronizerSingletonActor extends MessageSynchronizer {
   }
 
   def getNextQuantum(): Option[Long] = {
-
-    val sequence = nodes.toList.map(node => (node ? GetIncomingQuantum).asInstanceOf[Future[Option[Long]]])
-    val total = Future.foldLeft[Option[Long], Option[Long]](sequence)(None)((accum, each)=>
+    nodeIncomingQuantums.values.foldLeft[Option[Long]](None)( (accum, each) =>
       if (accum.isEmpty) {
         each
       } else if (each.isEmpty) {
         accum
       } else {
         Some(accum.get.min(each.get))
-      })
-    Await.result(total, Timeout(5, TimeUnit.MINUTES).duration)
+      }
+    )
   }
 
-  def allMessagesInThisQuantumProcessed(): Int = {
-    val sequence = nodes.toList.map(node => (node ? GetMessageTransferDeltaInCurrentQuantum).asInstanceOf[Future[Int]])
-    val total = Future.foldLeft[Int, Int](sequence)(0)((accum, each)=> accum + each)
-    Await.result(total, Timeout(5, TimeUnit.MINUTES).duration)
+  def numberOfPendingMessagesInQuantum(): Int = nodeMessageDeltas.values.sum
+
+  def setMessageDelta(nodeActorRef: ActorRef, messageDelta: Int) = {
+    nodeMessageDeltas(nodeActorRef) = messageDelta
   }
 
-  def notifyFinishedTime(nodeActorRef: ActorRef, t: Long, queueSize: Int, messageDelta: Int): Unit = {
+  def setIncomingQuantum(nodeActorRef: ActorRef, incomingQuantum: Option[Long]) = {
+    nodeIncomingQuantums(nodeActorRef) = incomingQuantum
+  }
+
+  def notifyFinishedTime(nodeActorRef: ActorRef, t: Long, queueSize: Int, messageDelta: Int, incomingQuantum: Option[Long]): Unit = {
 
     this.nodesFinishedThisQuantum += nodeActorRef
+    this.setMessageDelta(nodeActorRef, messageDelta)
+    this.setIncomingQuantum(nodeActorRef, incomingQuantum)
     this.messagesToBeProcessedFollowingQuantums += queueSize
 
     val allNodesReady = this.allNodesAreReady()
-    val allMessagesInThisQuantumProcessed = this.allMessagesInThisQuantumProcessed()
+    val numberOfPendingMessagesInQuantum = this.numberOfPendingMessagesInQuantum()
     val existPendingMessages = this.messagesToBeProcessedFollowingQuantums != 0
-    if (allNodesReady && allMessagesInThisQuantumProcessed == 0 && existPendingMessages) {
-      this.nodesFinishedThisQuantum.clear()
-      this.messagesToBeProcessedFollowingQuantums = 0
-
+    if (allNodesReady && numberOfPendingMessagesInQuantum == 0 && existPendingMessages) {
       val maybeNextQuantum = this.getNextQuantum()
       if (maybeNextQuantum.isDefined) {
         val sequence = this.nodes.map(node => (node ? AdvanceSimulationTime(maybeNextQuantum.get)).asInstanceOf[Future[Int]])
@@ -137,22 +154,30 @@ class GlobalSynchronizerSingletonActor extends MessageSynchronizer {
               println("Error while resuming next quantum!")
             }
           }
+
+        //Cleanup local state
+        this.nodesFinishedThisQuantum.clear()
+        this.nodeIncomingQuantums.clear()
+        this.nodeMessageDeltas.clear()
+        this.messagesToBeProcessedFollowingQuantums = 0
+      } else {
+        //Finished?
       }
     } else {
-      //println(s"Not ready to advance yet at t=$t. Nodes ready: $allNodesReady, all messages in quantum processed: $allMessagesInThisQuantumProcessed, existing pending messages: $existPendingMessages")
+      //println(s"Not ready to advance yet at t=$t. Nodes ready: $allNodesReady, all messages in quantum processed: $numberOfPendingMessagesInQuantum, existing pending messages: $existPendingMessages")
     }
   }
 }
 
 
-class GlobalSynchronizerSingleton[T <: AnyRef, TImpl <: T](system: ActorSystem, props: TypedProps[TImpl], name: String) extends Extension {
-  val instance: T = TypedActor(system).typedActorOf[T, TImpl](props, name)
+class GlobalSynchronizerWithLocalQueueSingleton(system: ActorSystem, props: Props, name: String) extends Extension {
+  val instance: ActorRef = system.actorOf(props, name)
 }
 
-object GlobalSynchronizerWithLocalQueueStrategyAccessor extends ExtensionId[GlobalSynchronizerSingleton[MessageSynchronizer, GlobalSynchronizerSingletonActor]] with ExtensionIdProvider {
+object GlobalSynchronizerWithLocalQueueStrategyAccessor extends ExtensionId[GlobalSynchronizerWithLocalQueueSingleton] with ExtensionIdProvider {
   final override def lookup = this
-  final override def createExtension(system: ExtendedActorSystem) = new GlobalSynchronizerSingleton(system, instanceProps, instanceName)
+  final override def createExtension(system: ExtendedActorSystem) = new GlobalSynchronizerWithLocalQueueSingleton(system, instanceProps, instanceName)
 
-  lazy val instanceProps = TypedProps[GlobalSynchronizerSingletonActor]()
+  lazy val instanceProps = Props[GlobalSynchronizerWithLocalQueueSingletonActor]
   lazy val instanceName = "global-synchronizer-actor"
 }
